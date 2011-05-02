@@ -1,7 +1,5 @@
 package org.francis.intel.challenge;
 
-import gnu.trove.list.array.TIntArrayList;
-
 public class MasyuSearchState {
     
     // Playing board values
@@ -38,7 +36,6 @@ public class MasyuSearchState {
     public final byte[] board;
     public final int[] pebbles;
     public int solutionCount = 0;
-    public TIntArrayList reusableBacktrack = new TIntArrayList();
     
     public MasyuSearchState(int height, int width, byte[] board) {
         assert height*width == board.length;
@@ -58,7 +55,7 @@ public class MasyuSearchState {
     public String search() {
         IntStack pStack = new IntStack(board.length+2);
         ByteStack dStack = new ByteStack(board.length+2);
-        Stack<int[]> cStack = new Stack<int[]>(board.length+2);
+        ResizingIntStack cStack = new ResizingIntStack(4*(board.length+2));
         StringBuilder result = new StringBuilder();
         byte[] pathMask = initPathMask();
         if (!initConstraints(pathMask)) {
@@ -89,7 +86,7 @@ public class MasyuSearchState {
                 }
                 pStack.pop();
                 dStack.pop();
-                resetPathMask(cStack.pop(),pathMask);
+                resetPathMask(cStack,pathMask);
                 backtrack(pStack,dStack,cStack,pathMask);
                 continue;
             }
@@ -139,59 +136,59 @@ public class MasyuSearchState {
         if (board[width*(height-1)] == WHITE) return false; // Bottom Left
         if (board[board.length-1] == WHITE) return false; // Bottom Right
         // Check the sides for white pebbles
-        TIntArrayList thowAway = new TIntArrayList();
+        ResizingIntStack throwAway = new ResizingIntStack(board.length);
         // Top side
         for (int i = 0; i < width; i++)
             if (board[i] == WHITE)
-                recordConstrs(i, EMPTY, NOT_DOWN, pathMask, thowAway);
+                recordConstrs(i, EMPTY, NOT_DOWN, pathMask, throwAway);
         // Bottom Side
         for (int i = width*(height-1); i < board.length; i++)
             if (board[i] == WHITE)
-                recordConstrs(i, EMPTY, NOT_UP, pathMask, thowAway);
+                recordConstrs(i, EMPTY, NOT_UP, pathMask, throwAway);
         // Left Side
         for (int i = 0; i < board.length; i+=width)
             if (board[i] == WHITE)
-                recordConstrs(i, EMPTY, NOT_RIGHT, pathMask, thowAway);
+                recordConstrs(i, EMPTY, NOT_RIGHT, pathMask, throwAway);
         // Right Side
         for (int i = width-1; i < board.length; i+=width)
             if (board[i] == WHITE)
-                recordConstrs(i, EMPTY, NOT_LEFT, pathMask, thowAway);
+                recordConstrs(i, EMPTY, NOT_LEFT, pathMask, throwAway);
         return true;
     }
 
-    private void backtrack(IntStack pStack, ByteStack dStack, Stack<int[]> cStack, byte[] pathMask) {
+    private void backtrack(IntStack pStack, ByteStack dStack, ResizingIntStack cStack, byte[] pathMask) {
         byte nDir = NOTHING_LEFT;
         do {
             pStack.pop();
             nDir = dStack.pop();
-            resetPathMask(cStack.pop(),pathMask);
+            resetPathMask(cStack,pathMask);
         } while (pStack.size() > 0 && !pshMove(pStack,dStack,cStack,pathMask,++nDir));
     }
     
-    private void resetPathMask(int[] constrs, byte[] pathMask) {
+    private void resetPathMask(ResizingIntStack cStack, byte[] pathMask) {
         assert checkPathMask(pathMask);
-        if (constrs == null) return;
-        assert constrs.length%2 == 0;
         // Here we must write back the saved constraints in reverse order so the earliest saved is written last
-        for (int i = constrs.length-1; i >= 0; ) {
-            byte maskState = (byte)constrs[i--];
-            int pos = constrs[i--];
+        int count = cStack.pop();
+        assert count%2 == 0;
+        for (; count > 0; count--) {
+            byte maskState = (byte)cStack.pop();
+            int pos = cStack.pop();
             pathMask[pos] = maskState;
         }
         assert checkPathMask(pathMask);
     }
 
-    private void pshInit(IntStack pStack, ByteStack dStack, Stack<int[]> cStack, byte[] pathMask, byte initDir) {
+    private void pshInit(IntStack pStack, ByteStack dStack, ResizingIntStack cStack, byte[] pathMask, byte initDir) {
         pStack.push(EMPTY);
         dStack.push(MAGIC_DIR);
-        cStack.push(new int[0]);
+        cStack.push(0); // Here we add the number of constraints added, not many
     }
 
-    private boolean pshMove(IntStack pStack, ByteStack dStack, Stack<int[]> cStack, byte[] pathMask) {
+    private boolean pshMove(IntStack pStack, ByteStack dStack, ResizingIntStack cStack, byte[] pathMask) {
         return pshMove(pStack, dStack, cStack, pathMask, UP);
     }
     
-    private boolean pshMove(IntStack pStack, ByteStack dStack, Stack<int[]> cStack, byte[] pathMask, byte initDir) {
+    private boolean pshMove(IntStack pStack, ByteStack dStack, ResizingIntStack cStack, byte[] pathMask, byte initDir) {
         assert pStack.size() == dStack.size();
         assert dStack.size() == cStack.size();
         int cPos = pStack.peek();
@@ -216,25 +213,28 @@ public class MasyuSearchState {
         return false;
     }
     
-    private void setConstraints(IntStack pStack, ByteStack dStack, Stack<int[]> cStack, byte[] pathMask) {
-        TIntArrayList backtrack = reusableBacktrack;
-        backtrack.clear();
+    private void setConstraints(IntStack pStack, ByteStack dStack, ResizingIntStack cStack, byte[] pathMask) {
+        int cCount = 0;
         int nPos = pStack.peek();
         byte nDir = dStack.peek();
         if (nPos == sPos) {
-            recordConstrs(nPos,nDir,EMPTY,pathMask,backtrack);
+            recordConstrs(nPos,nDir,EMPTY,pathMask,cStack);
+            cCount++;
         }
         else {
-            recordConstrs(nPos,nDir,CLOSED,pathMask,backtrack);
+            recordConstrs(nPos,nDir,CLOSED,pathMask,cStack);
+            cCount++;
         }
         if (dStack.size() == 1) {
             // We left the white pebble, add constraints for entering the white pebble
             if (board[nPos] == WHITE) {
-                recordConstrs(nPos,EMPTY,allowOnlyDir(complementDir(nDir)),pathMask,backtrack);
+                recordConstrs(nPos,EMPTY,allowOnlyDir(complementDir(nDir)),pathMask,cStack);
+                cCount++;
             }
             // We left the black pebble, add constraints for entering the black pebble
             else if (board[nPos] == BLACK) {
-                recordConstrs(nPos,EMPTY,forbidDir(complementDir(nDir)),pathMask,backtrack);
+                recordConstrs(nPos,EMPTY,forbidDir(complementDir(nDir)),pathMask,cStack);
+                cCount++;
             }
         }
         else if (dStack.size() == 2) {
@@ -244,11 +244,13 @@ public class MasyuSearchState {
             if (board[pPos] == WHITE && nDir == pDir) {
                 byte ppDir = complementDir(nDir);
                 int ppPos = nxtPos(pPos,ppDir);
-                recordConstrs(ppPos,EMPTY,forbidDir(ppDir),pathMask,backtrack);
+                recordConstrs(ppPos,EMPTY,forbidDir(ppDir),pathMask,cStack);
+                cCount++;
                 // We started on a white pebble and moved immediately to another one, add constraints for exiting the second white pebble
                 if (board[nPos] == WHITE) {
                     int nnPos = nxtPos(nPos,nDir);
-                    recordConstrs(nnPos,EMPTY,forbidDir(nDir),pathMask,backtrack);
+                    recordConstrs(nnPos,EMPTY,forbidDir(nDir),pathMask,cStack);
+                    cCount++;
                 }
             }
         }
@@ -258,50 +260,21 @@ public class MasyuSearchState {
             // We came straight in - add some constraints for the exit
             if (nDir == pDir && pDir == ppDir) {
                 int nnPos = nxtPos(nPos,nDir);
-                recordConstrs(nnPos,EMPTY,forbidDir(nDir),pathMask,backtrack);
+                recordConstrs(nnPos,EMPTY,forbidDir(nDir),pathMask,cStack);
+                cCount++;
             }
         }
-        int[] constrs = null;
-        if (!backtrack.isEmpty()) {
-            constrs = new int[backtrack.size()];
-            for (int i = 0; i < backtrack.size(); i++) {
-                constrs[i] = backtrack.get(i);
-            }
-        }
-        cStack.push(constrs);
+        cStack.push(cCount);
     }
 
-    private void recordConstrs(int pos, int dir, byte fFlags, byte[] pathMask, TIntArrayList backtrack) {
+    private void recordConstrs(int pos, int dir, byte fFlags, byte[] pathMask, ResizingIntStack cStack) {
         assert checkPathMask(pathMask);
-//        byte cMask = pathMask[pos];
-//        if ((fFlags & NOT_UP) == NOT_UP && (cMask & NOT_UP) != NOT_UP) {
-//            int upPos = nxtPos(pos,UP);
-//            rememberAndSetMaskState(upPos,(byte)(pathMask[upPos]|NOT_DOWN),pathMask,backtrack);
-//        }
-//        if ((fFlags & NOT_DOWN) == NOT_DOWN && (cMask & NOT_DOWN) != NOT_DOWN) {
-//            int downPos = nxtPos(pos,DOWN);
-//            rememberAndSetMaskState(downPos,(byte)(pathMask[downPos]|NOT_UP),pathMask,backtrack);
-//        }
-//        if ((fFlags & NOT_LEFT) == NOT_LEFT && (cMask & NOT_LEFT) != NOT_LEFT) {
-//            int leftPos = nxtPos(pos,LEFT);
-//            rememberAndSetMaskState(leftPos,(byte)(pathMask[leftPos]|NOT_RIGHT),pathMask,backtrack);
-//        }
-//        if ((fFlags & NOT_RIGHT) == NOT_RIGHT && (cMask & NOT_RIGHT) != NOT_RIGHT) {
-//            int rightPos = nxtPos(pos,RIGHT);
-//            rememberAndSetMaskState(rightPos,(byte)(pathMask[rightPos]|NOT_LEFT),pathMask,backtrack);
-//        }
         byte newMask = (byte)(pathMask[pos] | fFlags | dir);
-        rememberAndSetMaskState(pos,newMask,pathMask,backtrack);
-        assert checkPathMask(pathMask);
-    }
-
-    private void rememberAndSetMaskState(int pos, byte newMask, byte[] pathMask, TIntArrayList backtrack) {
         assert (pathMask[pos]&newMask) == pathMask[pos];
-        if (newMask != pathMask[pos]) {
-            backtrack.add(pos);
-            backtrack.add((int)pathMask[pos]);
-            pathMask[pos] = newMask;
-        }
+        cStack.push(pos);
+        cStack.push((int)pathMask[pos]);
+        pathMask[pos] = newMask;
+        assert checkPathMask(pathMask);
     }
     
     private byte complementDir(int dir) {
