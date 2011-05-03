@@ -4,7 +4,7 @@ import org.francis.intel.challenge.stack.ByteStack;
 import org.francis.intel.challenge.stack.IntStack;
 import org.francis.intel.challenge.stack.ResizingIntStack;
 
-public class PathMask implements Constants {
+public class PathState implements Constants {
     
     private final byte[] pathMaskA;
     private final byte[] boardA;
@@ -15,7 +15,7 @@ public class PathMask implements Constants {
     public final int sPos;
     boolean triviallyUnsolvable;
     
-    public PathMask(byte[] boardA, int width, int height) {
+    public PathState(byte[] boardA, int width, int height) {
         this.boardA = boardA;
         this.width = width;
         this.height = height;
@@ -91,7 +91,7 @@ public class PathMask implements Constants {
         else return true;
     }
     
-    public void setConstraints(IntStack pStack, ByteStack dStack, ResizingIntStack cStack, PathMask pathMask) {
+    public void setConstraints(IntStack pStack, ByteStack dStack, ResizingIntStack cStack, PathState pathMask) {
         int cCount = 0;
         int nPos = pStack.peek();
         byte nDir = dStack.peek();
@@ -171,6 +171,19 @@ public class PathMask implements Constants {
             }
         }
         return true;
+    }
+    
+    public String printBoard() {
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < boardA.length; i++) {
+            if (i % width == 0) builder.append("\n");
+            switch(boardA[i]) {
+                case BLACK : builder.append("B");
+                case WHITE : builder.append("W");
+                case EMPTY : builder.append(".");
+            }
+        }
+        return builder.toString();
     }
     
     @Override

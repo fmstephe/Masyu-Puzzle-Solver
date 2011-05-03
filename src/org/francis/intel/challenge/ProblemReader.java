@@ -19,8 +19,8 @@ public class ProblemReader {
             PuzzleData puzzle = new PuzzleData();
             String dimLine = in.readLine();
             String[] dimA = dimLine.split(" ");
-            puzzle.width = Integer.parseInt(dimA[0]);
-            puzzle.height = Integer.parseInt(dimA[1]);
+            puzzle.height = Integer.parseInt(dimA[0]);
+            puzzle.width = Integer.parseInt(dimA[1]);
             readPebbles(in,puzzle);
             readPebbles(in,puzzle);
             return puzzle;

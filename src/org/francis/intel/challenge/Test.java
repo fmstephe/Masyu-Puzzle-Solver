@@ -2,7 +2,7 @@ package org.francis.intel.challenge;
 
 import java.util.Random;
 
-import org.francis.intel.challenge.search.MasyuSearchState;
+import org.francis.intel.challenge.search.MasyuSearcher;
 
 public class Test {
 
@@ -10,7 +10,7 @@ public class Test {
         int height = 5;
         int width = 5;
         byte[] board = makeBoard(height,width);
-        MasyuSearchState searcher = new MasyuSearchState(height, width, board);
+        MasyuSearcher searcher = new MasyuSearcher(height, width, board);
         searcher.search();
     }
 
@@ -20,11 +20,11 @@ public class Test {
             board[0] = 0;
         }
         Random rnd = new Random();
-        board[5] = MasyuSearchState.WHITE;
-        board[11] = MasyuSearchState.WHITE;
-        board[12] = MasyuSearchState.WHITE;
-        board[13] = MasyuSearchState.WHITE;
-        board[20] = MasyuSearchState.BLACK;
+        board[5] = MasyuSearcher.WHITE;
+        board[11] = MasyuSearcher.WHITE;
+        board[12] = MasyuSearcher.WHITE;
+        board[13] = MasyuSearcher.WHITE;
+        board[20] = MasyuSearcher.BLACK;
         return board;
     }
 }
