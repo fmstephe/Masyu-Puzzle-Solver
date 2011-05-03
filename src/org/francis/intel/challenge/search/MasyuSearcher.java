@@ -7,24 +7,27 @@ import org.francis.intel.challenge.stack.ResizingIntStack;
 public class MasyuSearcher implements Constants {
     
     PathState pathState;
+    IntStack pStack;
+    ByteStack dStack;
+    ResizingIntStack cStack;
     public int solutionCount = 0;
     
     public MasyuSearcher(int height, int width, byte[] board) {
         assert height*width == board.length;
         pathState = new PathState(board,width,height);
+        pStack = new IntStack(pathState.totalSqrs+2);
+        dStack = new ByteStack(pathState.totalSqrs+2);
+        cStack = new ResizingIntStack(4*(pathState.totalSqrs+2));
     }
     
     public String search() {
-        IntStack pStack = new IntStack(pathState.totalSqrs+2);
-        ByteStack dStack = new ByteStack(pathState.totalSqrs+2);
-        ResizingIntStack cStack = new ResizingIntStack(4*(pathState.totalSqrs+2));
         StringBuilder result = new StringBuilder();
         if (pathState.triviallyUnsolvable) {
             System.out.println("Could not find a solution");
             return "No Solution Found";
         }
         System.out.println(pathState);
-        pshInit(pStack,dStack,cStack);
+        pshInit();
         while (true) {
             if (pStack.size() == 0) {
                 if (solutionCount == 0)
@@ -41,22 +44,22 @@ public class MasyuSearcher implements Constants {
                     System.out.println("Solution Found!");
                     System.out.println();System.out.println();
                     System.out.print(pathState);
-                    System.out.println(printSolution(dStack));
-                    result.append(printSolution(dStack));
+                    System.out.println(printSolution());
+                    result.append(printSolution());
                     result.append(System.getProperty("line.separator"));
                     System.out.println("Solution Found!");
                 }
                 pStack.pop();
                 dStack.pop();
                 pathState.backtrackConstraints(cStack);
-                backtrack(pStack,dStack,cStack);
+                backtrack();
                 continue;
             }
-            if (!pshMove(pStack,dStack,cStack)) backtrack(pStack,dStack,cStack);
+            if (!pshMove()) backtrack();
         }
     }
     
-    private String printSolution(ByteStack dStack) {
+    private String printSolution() {
         StringBuilder builder = new StringBuilder();
         String newLine = System.getProperty("line.separator");
         builder.append((getRow(pathState.sPos)+1)+" "+(getCol(pathState.sPos)+1));
@@ -77,26 +80,26 @@ public class MasyuSearcher implements Constants {
         return builder.toString();
     }
 
-    private void backtrack(IntStack pStack, ByteStack dStack, ResizingIntStack cStack) {
+    private void backtrack() {
         byte nDir = NOTHING_LEFT;
         do {
             pStack.pop();
             nDir = dStack.pop();
             pathState.backtrackConstraints(cStack);
-        } while (pStack.size() > 0 && !pshMove(pStack,dStack,cStack,++nDir));
+        } while (pStack.size() > 0 && !pshMove(++nDir));
     }
     
-    private void pshInit(IntStack pStack, ByteStack dStack, ResizingIntStack cStack) {
+    private void pshInit() {
         pStack.push(EMPTY);
         dStack.push(MAGIC_DIR);
         cStack.push(0); // Here we add the number of constraints added, not many
     }
 
-    private boolean pshMove(IntStack pStack, ByteStack dStack, ResizingIntStack cStack) {
-        return pshMove(pStack, dStack, cStack, UP);
+    private boolean pshMove() {
+        return pshMove(UP);
     }
     
-    private boolean pshMove(IntStack pStack, ByteStack dStack, ResizingIntStack cStack, byte initDir) {
+    private boolean pshMove(byte initDir) {
         assert pStack.size() == dStack.size();
         assert dStack.size() == cStack.size();
         int cPos = pStack.peek();
@@ -125,10 +128,6 @@ public class MasyuSearcher implements Constants {
         return cPos == pathState.sPos;
     }
 
-    private int getPos(int row, int col) {
-        return row*pathState.width+col;
-    }
-
     private int getRow(int pos) {
         return pos/pathState.width;
     }
@@ -136,42 +135,6 @@ public class MasyuSearcher implements Constants {
     private int getCol(int pos) {
         return pos%pathState.width;
     }
-    
-//    public boolean checkPathMask(byte[] pathMask) {
-//        for (int pos = 0; pos < pathMask.length; pos++) {
-//            byte cMask = pathMask[pos];
-//            
-//            int uPos = nxtPos(pos,UP);
-//            if (uPos > 0) {
-//                byte uMask = pathMask[uPos];
-//                boolean cUp = (cMask&NOT_UP) == NOT_UP;
-//                boolean uDown = (uMask&NOT_DOWN) == NOT_DOWN;
-//                assert cUp == uDown;
-//            }
-//            int dPos = nxtPos(pos,DOWN);
-//            if (dPos > 0) {
-//                byte dMask = pathMask[dPos];
-//                boolean cDown = (cMask&NOT_DOWN) == NOT_DOWN;
-//                boolean dUp = (dMask&NOT_UP) == NOT_UP;
-//                assert cDown == dUp;
-//            }
-//            int lPos = nxtPos(pos,LEFT);
-//            if (lPos > 0) {
-//                byte lMask = pathMask[lPos];
-//                boolean cLeft = (cMask&NOT_LEFT) == NOT_LEFT;
-//                boolean lRight = (lMask&NOT_RIGHT) == NOT_RIGHT;
-//                assert cLeft == lRight;
-//            }
-//            int rPos = nxtPos(pos,RIGHT);
-//            if (rPos > 0) {
-//                byte dMask = pathMask[rPos];
-//                boolean cRight = (cMask&NOT_RIGHT) == NOT_RIGHT;
-//                boolean rLeft = (dMask&NOT_LEFT) == NOT_LEFT;
-//                assert cRight == rLeft;
-//            }
-//        }
-//        return true; // Assertion hacking - poor form but very effective
-//    }
     
     @Override
     public String toString() {
