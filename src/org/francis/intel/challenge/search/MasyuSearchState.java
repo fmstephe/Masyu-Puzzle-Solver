@@ -6,40 +6,25 @@ import org.francis.intel.challenge.stack.ResizingIntStack;
 
 public class MasyuSearchState implements Constants {
     
-    public final int height;
-    public final int width;
-    public int sPos = -1;
-    public final byte[] board;
-    public final int[] pebbles;
+    PathMask pathMask;
     public int solutionCount = 0;
     
     public MasyuSearchState(int height, int width, byte[] board) {
         assert height*width == board.length;
-        this.height = height;
-        this.width = width;
-        this.board = board;
-        int pebbleCount = 0;
-        for (int i = 0; i < board.length; i++)
-            if (board[i] == BLACK || board[i] == WHITE) pebbleCount++;
-        pebbles = new int[pebbleCount];
-        pebbleCount = 0;
-        for (int i = 0; i < board.length; i++)
-            if (board[i] == BLACK || board[i] == WHITE) pebbles[pebbleCount++] = i;
-        sPos = pebbles[0];
+        pathMask = new PathMask(board,width,height);
     }
     
     public String search() {
-        IntStack pStack = new IntStack(board.length+2);
-        ByteStack dStack = new ByteStack(board.length+2);
-        ResizingIntStack cStack = new ResizingIntStack(4*(board.length+2));
+        IntStack pStack = new IntStack(pathMask.totalSqrs+2);
+        ByteStack dStack = new ByteStack(pathMask.totalSqrs+2);
+        ResizingIntStack cStack = new ResizingIntStack(4*(pathMask.totalSqrs+2));
         StringBuilder result = new StringBuilder();
-        byte[] pathMask = initPathMask();
-        if (!initConstraints(pathMask)) {
+        if (pathMask.triviallyUnsolvable) {
             System.out.println("Could not find a solution");
             return "No Solution Found";
         }
-        printState(pathMask);
-        pshInit(pStack,dStack,cStack,pathMask,UP);
+        System.out.println(pathMask);
+        pshInit(pStack,dStack,cStack);
         while (true) {
             if (pStack.size() == 0) {
                 if (solutionCount == 0)
@@ -50,11 +35,12 @@ public class MasyuSearchState implements Constants {
             }
 //            printState(pathMask);
             if (pStack.size() > 2 && returned(pStack.peek())) {
-                if (complete(pStack.peek(),pathMask)) {
+                if (pathMask.complete()) {
                     solutionCount++;
                     System.out.println();
                     System.out.println("Solution Found!");
-                    printState(pathMask);
+                    System.out.println();System.out.println();
+                    System.out.print(pathMask);
                     System.out.println(printSolution(dStack));
                     result.append(printSolution(dStack));
                     result.append(System.getProperty("line.separator"));
@@ -62,18 +48,18 @@ public class MasyuSearchState implements Constants {
                 }
                 pStack.pop();
                 dStack.pop();
-                resetPathMask(cStack,pathMask);
-                backtrack(pStack,dStack,cStack,pathMask);
+                pathMask.backtrackConstraints(cStack);
+                backtrack(pStack,dStack,cStack);
                 continue;
             }
-            if (!pshMove(pStack,dStack,cStack,pathMask)) backtrack(pStack,dStack,cStack,pathMask);
+            if (!pshMove(pStack,dStack,cStack)) backtrack(pStack,dStack,cStack);
         }
     }
     
     private String printSolution(ByteStack dStack) {
         StringBuilder builder = new StringBuilder();
         String newLine = System.getProperty("line.separator");
-        builder.append((getRow(sPos)+1)+" "+(getCol(sPos)+1));
+        builder.append((getRow(pathMask.sPos)+1)+" "+(getCol(pathMask.sPos)+1));
         builder.append(newLine);
         int count = 0;
         for (int i = dStack.size()-1; i >= 0; i--) {
@@ -91,348 +77,104 @@ public class MasyuSearchState implements Constants {
         return builder.toString();
     }
 
-    private byte[] initPathMask() {
-        byte[] pathMask = new byte[board.length];
-        for (int i = 0; i < pathMask.length; i++) {
-            byte forbidden = 0;
-            forbidden = i < width ? (byte)(forbidden | NOT_UP) : forbidden;
-            forbidden = (i % width) == 0 ? (byte)(forbidden | NOT_LEFT) : forbidden;
-            forbidden = (i % width) == width-1 ? (byte)(forbidden | NOT_RIGHT) : forbidden;
-            forbidden = i >= width*(height-1) ? (byte)(forbidden | NOT_DOWN) : forbidden;
-            pathMask[i] = (byte)(EMPTY_PATH | forbidden);
-        }
-        assert checkPathMask(pathMask);
-        return pathMask;
-    }
-
-    private boolean initConstraints(byte[] pathMask) {
-        // Check the corners for white pebbles
-        if (board[0] == WHITE) return false; // Top left
-        if (board[width-1] == WHITE) return false; // Top Right
-        if (board[width*(height-1)] == WHITE) return false; // Bottom Left
-        if (board[board.length-1] == WHITE) return false; // Bottom Right
-        // Check the sides for white pebbles
-        ResizingIntStack throwAway = new ResizingIntStack(board.length);
-        // Top side
-        for (int i = 0; i < width; i++)
-            if (board[i] == WHITE)
-                recordConstrs(i, EMPTY, NOT_DOWN, pathMask, throwAway);
-        // Bottom Side
-        for (int i = width*(height-1); i < board.length; i++)
-            if (board[i] == WHITE)
-                recordConstrs(i, EMPTY, NOT_UP, pathMask, throwAway);
-        // Left Side
-        for (int i = 0; i < board.length; i+=width)
-            if (board[i] == WHITE)
-                recordConstrs(i, EMPTY, NOT_RIGHT, pathMask, throwAway);
-        // Right Side
-        for (int i = width-1; i < board.length; i+=width)
-            if (board[i] == WHITE)
-                recordConstrs(i, EMPTY, NOT_LEFT, pathMask, throwAway);
-        return true;
-    }
-
-    private void backtrack(IntStack pStack, ByteStack dStack, ResizingIntStack cStack, byte[] pathMask) {
+    private void backtrack(IntStack pStack, ByteStack dStack, ResizingIntStack cStack) {
         byte nDir = NOTHING_LEFT;
         do {
             pStack.pop();
             nDir = dStack.pop();
-            resetPathMask(cStack,pathMask);
-        } while (pStack.size() > 0 && !pshMove(pStack,dStack,cStack,pathMask,++nDir));
+            pathMask.backtrackConstraints(cStack);
+        } while (pStack.size() > 0 && !pshMove(pStack,dStack,cStack,++nDir));
     }
     
-    private void resetPathMask(ResizingIntStack cStack, byte[] pathMask) {
-        assert checkPathMask(pathMask);
-        // Here we must write back the saved constraints in reverse order so the earliest saved is written last
-        int count = cStack.pop();
-        assert count%2 == 0;
-        for (; count > 0; count--) {
-            byte maskState = (byte)cStack.pop();
-            int pos = cStack.pop();
-            pathMask[pos] = maskState;
-        }
-        assert checkPathMask(pathMask);
-    }
-
-    private void pshInit(IntStack pStack, ByteStack dStack, ResizingIntStack cStack, byte[] pathMask, byte initDir) {
+    private void pshInit(IntStack pStack, ByteStack dStack, ResizingIntStack cStack) {
         pStack.push(EMPTY);
         dStack.push(MAGIC_DIR);
         cStack.push(0); // Here we add the number of constraints added, not many
     }
 
-    private boolean pshMove(IntStack pStack, ByteStack dStack, ResizingIntStack cStack, byte[] pathMask) {
-        return pshMove(pStack, dStack, cStack, pathMask, UP);
+    private boolean pshMove(IntStack pStack, ByteStack dStack, ResizingIntStack cStack) {
+        return pshMove(pStack, dStack, cStack, UP);
     }
     
-    private boolean pshMove(IntStack pStack, ByteStack dStack, ResizingIntStack cStack, byte[] pathMask, byte initDir) {
+    private boolean pshMove(IntStack pStack, ByteStack dStack, ResizingIntStack cStack, byte initDir) {
         assert pStack.size() == dStack.size();
         assert dStack.size() == cStack.size();
         int cPos = pStack.peek();
         byte cDir = dStack.peek();
-        int nPos = nxtPos(cPos,cDir);
-        if (nPos == sPos && cDir != MAGIC_DIR) {
+        int nPos = SearchUtils.nxtPos(cPos,cDir,pathMask.sPos,pathMask.width,pathMask.totalSqrs);
+        if (nPos == pathMask.sPos && cDir != MAGIC_DIR) {
             pStack.push(nPos);
             dStack.push(EMPTY);
-            setConstraints(pStack,dStack,cStack,pathMask);
+            pathMask.setConstraints(pStack,dStack,cStack,pathMask);
             return true;
         }
         for (byte nDir = initDir; nDir < NOTHING_LEFT; nDir++) {
             if (nDir == (cDir^1)) continue;
-            if (isForbidden(nPos,nDir,pathMask)) continue;
-            if(legal(cDir,nPos,nDir,pathMask) || cDir == MAGIC_DIR) { // The magic dir skirts around legality
+            if (pathMask.isForbidden(nPos,nDir)) continue;
+            if(pathMask.legal(cDir,nPos,nDir) || cDir == MAGIC_DIR) { // The magic dir skirts around legality
                 pStack.push(nPos);
                 dStack.push(nDir);
-                setConstraints(pStack,dStack,cStack,pathMask);
+                pathMask.setConstraints(pStack,dStack,cStack,pathMask);
                 return true;
             }
         }
         return false;
-    }
-    
-    private void setConstraints(IntStack pStack, ByteStack dStack, ResizingIntStack cStack, byte[] pathMask) {
-        int cCount = 0;
-        int nPos = pStack.peek();
-        byte nDir = dStack.peek();
-        if (nPos == sPos) {
-            recordConstrs(nPos,nDir,EMPTY,pathMask,cStack);
-            cCount++;
-        }
-        else {
-            recordConstrs(nPos,nDir,CLOSED,pathMask,cStack);
-            cCount++;
-        }
-        if (dStack.size() == 1) {
-            // We left the white pebble, add constraints for entering the white pebble
-            if (board[nPos] == WHITE) {
-                recordConstrs(nPos,EMPTY,allowOnlyDir(complementDir(nDir)),pathMask,cStack);
-                cCount++;
-            }
-            // We left the black pebble, add constraints for entering the black pebble
-            else if (board[nPos] == BLACK) {
-                recordConstrs(nPos,EMPTY,forbidDir(complementDir(nDir)),pathMask,cStack);
-                cCount++;
-            }
-        }
-        else if (dStack.size() == 2) {
-            int pPos = pStack.peek(1);
-            byte pDir = dStack.peek(1);
-            // We left the white pebble and went straight, add constraints for turning before entering the white pebble
-            if (board[pPos] == WHITE && nDir == pDir) {
-                byte ppDir = complementDir(nDir);
-                int ppPos = nxtPos(pPos,ppDir);
-                recordConstrs(ppPos,EMPTY,forbidDir(ppDir),pathMask,cStack);
-                cCount++;
-                // We started on a white pebble and moved immediately to another one, add constraints for exiting the second white pebble
-                if (board[nPos] == WHITE) {
-                    int nnPos = nxtPos(nPos,nDir);
-                    recordConstrs(nnPos,EMPTY,forbidDir(nDir),pathMask,cStack);
-                    cCount++;
-                }
-            }
-        }
-        else if (board[nPos] == WHITE) { // dStack.size() > 2
-            int pDir = dStack.peek(1);
-            int ppDir = dStack.peek(2);
-            // We came straight in - add some constraints for the exit
-            if (nDir == pDir && pDir == ppDir) {
-                int nnPos = nxtPos(nPos,nDir);
-                recordConstrs(nnPos,EMPTY,forbidDir(nDir),pathMask,cStack);
-                cCount++;
-            }
-        }
-        cStack.push(cCount);
-    }
-
-    private void recordConstrs(int pos, int dir, byte fFlags, byte[] pathMask, ResizingIntStack cStack) {
-        assert checkPathMask(pathMask);
-        byte newMask = (byte)(pathMask[pos] | fFlags | dir);
-        assert (pathMask[pos]&newMask) == pathMask[pos];
-        cStack.push(pos);
-        cStack.push((int)pathMask[pos]);
-        pathMask[pos] = newMask;
-        assert checkPathMask(pathMask);
-    }
-    
-    private byte complementDir(int dir) {
-        return (byte)(dir^1);
-    }
-    
-    private byte forbidDir(byte dir) {
-        return (byte)(1 << (dir+LEFT_SHIFT_OFFSET));
-    }
-    
-    private byte allowOnlyDir(byte dir) {
-        byte forbidMask = (byte)(1 << (dir+LEFT_SHIFT_OFFSET));
-        return (byte)(forbidMask ^ MASK_CONSTRS);
-    }
-    
-    private boolean isForbidden(int pos, byte dir, byte[] pathMask) {
-        byte mask = forbidDir(dir);
-        if ((pathMask[pos] & mask) == mask)
-            return true;
-        int nPos = nxtPos(pos,dir);
-        if (nPos >= 0) {
-            mask = forbidDir(complementDir(dir));
-            if ((pathMask[nPos] & mask) == mask)
-                return true;
-        }
-        return false;
-    }
-
-    private boolean legal(byte cDir, int nPos, byte nDir, byte[] pathMask) {
-        if (board[nPos] == WHITE) return cDir == nDir;
-        else if (board[nPos] == BLACK) return cDir != nDir; // This indicates a nice right angle turn
-        else return true;
-    }
-
-    private void printState(byte[] pathMask) {
-        System.out.println();System.out.println();
-        for (int row = 0; row < height; row++) {
-            for (int i = 0; i < width; i++) {
-                String sqr = "    ";
-                byte constrsElem = (byte)(pathMask[(row*width)+i] & MASK_CONSTRS);
-                if ((constrsElem & NOT_UP) == NOT_UP) sqr = "  - ";
-                System.out.print(sqr);
-            }
-            System.out.println();
-            for (int i = 0; i < width; i++) {
-                String sqr = null;
-                byte constrsElem = (byte)(pathMask[(row*width)+i] & MASK_CONSTRS);
-                if (i == 0) {
-                    if ((constrsElem & NOT_LEFT) == NOT_LEFT) 
-                        sqr = "|";
-                    else
-                        sqr = " ";
-                    System.out.print(sqr);
-                }
-                byte pathElem = (byte)(pathMask[(row*width)+i] & MASK_PATH);
-                switch (pathElem) {
-                    case UP : sqr = (row*width)+i == sPos ? " u " : " A "; break;
-                    case DOWN : sqr = (row*width)+i == sPos ? " d " : " V "; break;
-                    case LEFT : sqr = (row*width)+i == sPos ? " l " : " < "; break;
-                    case RIGHT : sqr = (row*width)+i == sPos ? " r " : " > "; break;
-                    default : sqr = " . ";
-                }
-                System.out.print(sqr);
-                if ((constrsElem & NOT_RIGHT) == NOT_RIGHT)
-                    sqr = "|";
-                else
-                    sqr = " ";
-                System.out.print(sqr);
-            }
-            System.out.print("                  ");
-            for (int i = 0; i < width; i++) {
-                switch (board[(row*width)+i] & MASK_PATH) {
-                    case WHITE : System.out.print("  W  "); break;
-                    case BLACK : System.out.print("  B  "); break;
-                    default : System.out.print("  .  ");
-                }
-            }
-            System.out.println();
-            if (row == height-1) {
-                for (int i = 0; i < width; i++) {
-                    String sqr = "    ";
-                    byte constrsElem = (byte)(pathMask[(row*width)+i] & MASK_CONSTRS);
-                    if ((constrsElem & NOT_DOWN) == NOT_DOWN) sqr = "  - ";
-                    System.out.print(sqr);
-                }
-                System.out.println();
-            }
-        }
-    }
-
-    private int nxtPos(int pos, byte dir) {
-        switch (dir) {
-            case UP :
-                return pos-width;
-            case DOWN : 
-                int np = pos+width;
-                return np >= board.length ? -1 : np;
-            case LEFT : 
-                int col = getCol(pos);
-                return col == 0 ? -1 : pos-1;
-            case RIGHT : 
-                col = getCol(pos);
-                return col == width-1 ? -1 : pos+1;
-            case MAGIC_DIR :
-                return sPos;
-            default : throw new IllegalArgumentException();
-        }
     }
     
     private boolean returned(int cPos) {
-        return cPos == sPos;
-    }
-    private boolean complete(int cPos, byte[] pathMask) {
-        if (cPos != sPos) return false;
-        for (int pebble : pebbles) {
-            byte pebblePath = (byte)(pathMask[pebble]&MASK_PATH);
-            if (pebblePath == 0) {
-                return false;
-            }
-        }
-        return true;
+        return cPos == pathMask.sPos;
     }
 
     private int getPos(int row, int col) {
-        return row*width+col;
+        return row*pathMask.width+col;
     }
 
     private int getRow(int pos) {
-        return pos/width;
+        return pos/pathMask.width;
     }
     
     private int getCol(int pos) {
-        return pos%width;
+        return pos%pathMask.width;
     }
     
-    public boolean checkPathMask(byte[] pathMask) {
-        for (int pos = 0; pos < pathMask.length; pos++) {
-            byte cMask = pathMask[pos];
-            
-            int uPos = nxtPos(pos,UP);
-            if (uPos > 0) {
-                byte uMask = pathMask[uPos];
-                boolean cUp = (cMask&NOT_UP) == NOT_UP;
-                boolean uDown = (uMask&NOT_DOWN) == NOT_DOWN;
-                assert cUp == uDown;
-            }
-            int dPos = nxtPos(pos,DOWN);
-            if (dPos > 0) {
-                byte dMask = pathMask[dPos];
-                boolean cDown = (cMask&NOT_DOWN) == NOT_DOWN;
-                boolean dUp = (dMask&NOT_UP) == NOT_UP;
-                assert cDown == dUp;
-            }
-            int lPos = nxtPos(pos,LEFT);
-            if (lPos > 0) {
-                byte lMask = pathMask[lPos];
-                boolean cLeft = (cMask&NOT_LEFT) == NOT_LEFT;
-                boolean lRight = (lMask&NOT_RIGHT) == NOT_RIGHT;
-                assert cLeft == lRight;
-            }
-            int rPos = nxtPos(pos,RIGHT);
-            if (rPos > 0) {
-                byte dMask = pathMask[rPos];
-                boolean cRight = (cMask&NOT_RIGHT) == NOT_RIGHT;
-                boolean rLeft = (dMask&NOT_LEFT) == NOT_LEFT;
-                assert cRight == rLeft;
-            }
-        }
-        return true; // Assertion hacking - poor form but very effective
-    }
+//    public boolean checkPathMask(byte[] pathMask) {
+//        for (int pos = 0; pos < pathMask.length; pos++) {
+//            byte cMask = pathMask[pos];
+//            
+//            int uPos = nxtPos(pos,UP);
+//            if (uPos > 0) {
+//                byte uMask = pathMask[uPos];
+//                boolean cUp = (cMask&NOT_UP) == NOT_UP;
+//                boolean uDown = (uMask&NOT_DOWN) == NOT_DOWN;
+//                assert cUp == uDown;
+//            }
+//            int dPos = nxtPos(pos,DOWN);
+//            if (dPos > 0) {
+//                byte dMask = pathMask[dPos];
+//                boolean cDown = (cMask&NOT_DOWN) == NOT_DOWN;
+//                boolean dUp = (dMask&NOT_UP) == NOT_UP;
+//                assert cDown == dUp;
+//            }
+//            int lPos = nxtPos(pos,LEFT);
+//            if (lPos > 0) {
+//                byte lMask = pathMask[lPos];
+//                boolean cLeft = (cMask&NOT_LEFT) == NOT_LEFT;
+//                boolean lRight = (lMask&NOT_RIGHT) == NOT_RIGHT;
+//                assert cLeft == lRight;
+//            }
+//            int rPos = nxtPos(pos,RIGHT);
+//            if (rPos > 0) {
+//                byte dMask = pathMask[rPos];
+//                boolean cRight = (cMask&NOT_RIGHT) == NOT_RIGHT;
+//                boolean rLeft = (dMask&NOT_LEFT) == NOT_LEFT;
+//                assert cRight == rLeft;
+//            }
+//        }
+//        return true; // Assertion hacking - poor form but very effective
+//    }
     
     @Override
     public String toString() {
-        StringBuilder out = new StringBuilder();
-        for (int i = 0; i < board.length; i++) {
-            if (i % width == 0) out.append("\n");
-            switch (board[i] & MASK_PATH) {
-                case WHITE : out.append(" W "); break;
-                case BLACK : out.append(" B "); break;
-                default : out.append(" . ");
-            }
-        }
-        return out.toString();
+        return pathMask.toString();
     }
 }

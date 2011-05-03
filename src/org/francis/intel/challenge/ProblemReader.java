@@ -42,6 +42,7 @@ public class ProblemReader {
 
     private static void readPebbles(LineNumberReader in, PuzzleData puzzle) throws IOException {
         String pebbleIndicator = in.readLine();
+        if (pebbleIndicator == null) return;
         boolean isWhite = pebbleIndicator.trim().equals("W");
         List<Integer> fillingList = null;
         if (isWhite)
