@@ -1,6 +1,5 @@
 package org.francis.intel.challenge.search;
 
-import org.francis.intel.challenge.stack.ByteStack;
 import org.francis.intel.challenge.stack.IntStack;
 import org.francis.intel.challenge.stack.ResizingIntStack;
 
@@ -54,21 +53,85 @@ public class PathState implements Constants {
         // Check the sides for white pebbles
         ResizingIntStack throwAway = new ResizingIntStack(boardA.length);
         // Top side
-        for (int i = 0; i < width; i++)
-            if (boardA[i] == WHITE)
+        int inARow = 0;
+        for (int i = 0; i < width; i++) {
+            if (inARow > 2) {
+                return false;
+            }
+            if (boardA[i] == WHITE) {
                 recordConstrs(i, EMPTY, NOT_DOWN, throwAway);
+                inARow++;
+            }
+            else {
+                inARow = 0;
+            }
+            if (inARow == 2) {
+                int leftPos = i-2;
+                recordConstrs(leftPos, EMPTY, NOT_LEFT, throwAway);
+                int rightPos = i+1;
+                recordConstrs(rightPos, EMPTY, NOT_RIGHT, throwAway);
+            }
+        }
+        inARow = 0;
         // Bottom Side
-        for (int i = width*(height-1); i < boardA.length; i++)
-            if (boardA[i] == WHITE)
+        for (int i = width*(height-1); i < boardA.length; i++) {
+            if (inARow > 2) {
+                return false;
+            }
+            if (boardA[i] == WHITE) {
                 recordConstrs(i, EMPTY, NOT_UP, throwAway);
+                inARow++;
+            }
+            else {
+                inARow = 0;
+            }
+            if (inARow == 2) {
+                int leftPos = i-2;
+                recordConstrs(leftPos, EMPTY, NOT_LEFT, throwAway);
+                int rightPos = i+1;
+                recordConstrs(rightPos, EMPTY, NOT_RIGHT, throwAway);
+            }
+        }
+        inARow = 0;
         // Left Side
-        for (int i = 0; i < boardA.length; i+=width)
-            if (boardA[i] == WHITE)
+        for (int i = 0; i < boardA.length; i+=width) {
+            if (inARow > 2) {
+                return false;
+            }
+            if (boardA[i] == WHITE) {
                 recordConstrs(i, EMPTY, NOT_RIGHT, throwAway);
+                inARow++;
+            }
+            else {
+                inARow = 0;
+            }
+            if (inARow == 2) {
+                int topPos = i-(2*width);
+                recordConstrs(topPos, EMPTY, NOT_UP, throwAway);
+                int bottomPos = i+width;
+                recordConstrs(bottomPos, EMPTY, NOT_DOWN, throwAway);
+            }
+        }
+        inARow = 0;
         // Right Side
-        for (int i = width-1; i < boardA.length; i+=width)
-            if (boardA[i] == WHITE)
+        for (int i = width-1; i < boardA.length; i+=width) {
+            if (inARow > 2) {
+                return false;
+            }
+            if (boardA[i] == WHITE) {
                 recordConstrs(i, EMPTY, NOT_LEFT, throwAway);
+                inARow++;
+            }
+            else {
+                inARow = 0;
+            }
+            if (inARow == 2) {
+                int topPos = i-(2*width);
+                recordConstrs(topPos, EMPTY, NOT_UP, throwAway);
+                int bottomPos = i+width;
+                recordConstrs(bottomPos, EMPTY, NOT_DOWN, throwAway);
+            }
+        }
         return true;
     }
     
@@ -85,13 +148,42 @@ public class PathState implements Constants {
         return false;
     }
     
-    public boolean legal(int cDir, int nPos, int nDir) {
+    public boolean legal(IntStack dStack, int cPos, int cDir, int nPos, int nDir) {
+        if (cDir != MAGIC_DIR && !checkSurroundingConstraints(cPos)) return false;
         if (boardA[nPos] == WHITE) return cDir == nDir; // Must pass straight through a white pebble
         else if (boardA[nPos] == BLACK) return cDir != nDir; // This indicates a nice right angle turn
         else return true;
     }
     
-    public void setConstraints(IntStack pStack, ByteStack dStack, ResizingIntStack cStack, PathState pathMask) {
+    private boolean checkSurroundingConstraints(int pos) {
+        for (int dir = UP; dir < NOTHING_LEFT; dir++) {
+            int nPos = SearchUtils.nxtPos(pos, dir, -1, width, totalSqrs);
+            if (nPos >= 0) {
+                if (isOverConstrained(nPos)) {
+                    return false; 
+                }
+            }
+        }
+        return true;
+    }
+    
+    private boolean isOverConstrained(int pos) {
+        if (boardA[pos] == EMPTY) return false;
+        int mask = pathMaskA[pos];
+        if ((mask & MASK_PATH) != 0) return false; 
+        int conCount = 0;
+        for (int dir = UP; dir < NOTHING_LEFT; dir++) {
+            int forbidDir = SearchUtils.forbidDir(dir);
+            int forbidCDir = SearchUtils.forbidDir(SearchUtils.complementDir(dir));
+            if ((mask & forbidDir) == forbidDir || (pathMaskA[SearchUtils.nxtPos(pos, dir, -1, width, totalSqrs)] & forbidCDir) == forbidCDir) {
+                conCount++;
+            }
+        }
+            
+        return conCount > 2;
+    }
+    
+    public void setConstraints(IntStack pStack, IntStack dStack, ResizingIntStack cStack, PathState pathMask) {
         int cCount = 0;
         int nPos = pStack.peek();
         int nDir = dStack.peek();
@@ -100,10 +192,23 @@ public class PathState implements Constants {
             cCount++;
         }
         else {
-            pathMask.recordConstrs(nPos,nDir,CLOSED,cStack);
+            int bMask = SearchUtils.forbidDir(SearchUtils.complementDir(dStack.peek(1)));
+            int fMask = SearchUtils.forbidDir(nDir);
+            int mask = CLOSED ^ bMask ^ fMask;
+            pathMask.recordConstrs(nPos,nDir,mask,cStack);
             cCount++;
         }
-        if (dStack.size() == 1) {
+        if (dStack.size() > 2 && boardA[nPos] == WHITE) {
+            int pDir = dStack.peek(1);
+            int ppDir = dStack.peek(2);
+            // We came straight in - add some constraints for the exit
+            if (nDir == pDir && pDir == ppDir) {
+                int nnPos = SearchUtils.nxtPos(nPos,nDir,sPos,width,boardA.length);
+                pathMask.recordConstrs(nnPos,EMPTY,SearchUtils.forbidDir(nDir),cStack);
+                cCount++;
+            }
+        }
+        else if (dStack.size() == 1) {
             // We left the white pebble, add constraints for entering the white pebble
             if (boardA[nPos] == WHITE) {
                 pathMask.recordConstrs(nPos,EMPTY,SearchUtils.allowOnlyDir(SearchUtils.complementDir(nDir)),cStack);
@@ -132,16 +237,6 @@ public class PathState implements Constants {
                 }
             }
         }
-        else if (boardA[nPos] == WHITE) { // dStack.size() > 2
-            int pDir = dStack.peek(1);
-            int ppDir = dStack.peek(2);
-            // We came straight in - add some constraints for the exit
-            if (nDir == pDir && pDir == ppDir) {
-                int nnPos = SearchUtils.nxtPos(nPos,nDir,sPos,width,boardA.length);
-                pathMask.recordConstrs(nnPos,EMPTY,SearchUtils.forbidDir(nDir),cStack);
-                cCount++;
-            }
-        }
         cStack.push(cCount);
     }
     
@@ -151,11 +246,28 @@ public class PathState implements Constants {
         cStack.push(pos);
         cStack.push(pathMaskA[pos]);
         pathMaskA[pos] = newMask;
+        assert checkBoardState();
     }
     
+    private boolean checkBoardState() {
+        for (int pos = 0; pos < pathMaskA.length; pos++) {
+            int dir = pathMaskA[pos] & MASK_PATH;
+            if (dir != 0) { 
+                int nPos = SearchUtils.nxtPos(pos, dir, -1, width, totalSqrs);
+                if (nPos >= 0) {
+                    int forbidMask = SearchUtils.forbidDir(SearchUtils.complementDir(dir));
+                    if ((pathMaskA[nPos] & forbidMask) == forbidMask) {
+                        System.out.println(this);
+                        assert false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
     public void backtrackConstraints(ResizingIntStack cStack) {
         int count = cStack.pop();
-        assert count%2 == 0;
         for (; count > 0; count--) {
             int maskState = cStack.pop();
             int pos = cStack.pop();
@@ -192,22 +304,20 @@ public class PathState implements Constants {
         String newLine = System.getProperty("line.separator");
         for (int row = 0; row < height; row++) {
             for (int i = 0; i < width; i++) {
-                String sqr = "    ";
+                String sqr = "     ";
                 int constrsElem = (pathMaskA[(row*width)+i] & MASK_CONSTRS);
-                if ((constrsElem & NOT_UP) == NOT_UP) sqr = "  - ";
+                if ((constrsElem & NOT_UP) == NOT_UP) sqr = "  -  ";
                 builder.append(sqr);
             }
             builder.append(newLine);
             for (int i = 0; i < width; i++) {
                 String sqr = null;
                 int constrsElem = (pathMaskA[(row*width)+i] & MASK_CONSTRS);
-                if (i == 0) {
-                    if ((constrsElem & NOT_LEFT) == NOT_LEFT) 
-                        sqr = "|";
-                    else
-                        sqr = " ";
-                    builder.append(sqr);
-                }
+                if ((constrsElem & NOT_LEFT) == NOT_LEFT) 
+                    sqr = "|";
+                else
+                    sqr = " ";
+                builder.append(sqr);
                 int pathElem = (pathMaskA[(row*width)+i] & MASK_PATH);
                 switch (pathElem) {
                     case UP : sqr = (row*width)+i == sPos ? " u " : " A "; break;
@@ -232,15 +342,13 @@ public class PathState implements Constants {
                 }
             }
             builder.append(newLine);
-            if (row == height-1) {
-                for (int i = 0; i < width; i++) {
-                    String sqr = "    ";
-                    int constrsElem = (pathMaskA[(row*width)+i] & MASK_CONSTRS);
-                    if ((constrsElem & NOT_DOWN) == NOT_DOWN) sqr = "  - ";
-                    builder.append(sqr);
-                }
-                builder.append(newLine);
+            for (int i = 0; i < width; i++) {
+                String sqr = "     ";
+                int constrsElem = (pathMaskA[(row*width)+i] & MASK_CONSTRS);
+                if ((constrsElem & NOT_DOWN) == NOT_DOWN) sqr = "  -  ";
+                builder.append(sqr);
             }
+            builder.append(newLine);
         }
         return builder.toString();
     }

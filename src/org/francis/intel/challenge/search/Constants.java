@@ -18,6 +18,12 @@ public interface Constants {
     public static final int NOT_LEFT = 64;
     public static final int NOT_RIGHT = 128;
     public static final int CLOSED = NOT_UP | NOT_DOWN | NOT_LEFT | NOT_RIGHT;
+    public static final int NOT_UP_DOWN = 256;
+    public static final int NOT_LEFT_RIGHT = 512;
+    public static final int NOT_LEFT_UP = 1024;
+    public static final int NOT_LEFT_DOWN = 2048;
+    public static final int NOT_RIGHT_UP = 4096;
+    public static final int NOT_RIGHT_DOWN = 8192;
     // Mask for isolating path
     public static final int MASK_PATH = Integer.parseInt("00000111",2);
     // Mask for isolating the forbidden flags

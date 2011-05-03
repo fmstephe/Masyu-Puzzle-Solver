@@ -1,6 +1,5 @@
 package org.francis.intel.challenge.search;
 
-import org.francis.intel.challenge.stack.ByteStack;
 import org.francis.intel.challenge.stack.IntStack;
 import org.francis.intel.challenge.stack.ResizingIntStack;
 
@@ -8,7 +7,7 @@ public class MasyuSearcher implements Constants {
     
     PathState pathState;
     IntStack pStack;
-    ByteStack dStack;
+    IntStack dStack;
     ResizingIntStack cStack;
     public int solutionCount = 0;
     
@@ -16,7 +15,7 @@ public class MasyuSearcher implements Constants {
         assert height*width == board.length;
         pathState = new PathState(board,width,height);
         pStack = new IntStack(pathState.totalSqrs+2);
-        dStack = new ByteStack(pathState.totalSqrs+2);
+        dStack = new IntStack(pathState.totalSqrs+2);
         cStack = new ResizingIntStack(4*(pathState.totalSqrs+2));
     }
     
@@ -101,7 +100,6 @@ public class MasyuSearcher implements Constants {
     
     private boolean pshMove(int initDir) {
         assert pStack.size() == dStack.size();
-        assert dStack.size() == cStack.size();
         int cPos = pStack.peek();
         int cDir = dStack.peek();
         int nPos = SearchUtils.nxtPos(cPos,cDir,pathState.sPos,pathState.width,pathState.totalSqrs);
@@ -114,7 +112,7 @@ public class MasyuSearcher implements Constants {
         for (int nDir = initDir; nDir < NOTHING_LEFT; nDir++) {
             if (nDir == (cDir^1)) continue;
             if (pathState.isForbidden(nPos,nDir)) continue;
-            if(pathState.legal(cDir,nPos,nDir) || cDir == MAGIC_DIR) { // The magic dir skirts around legality
+            if(pathState.legal(dStack,cPos,cDir,nPos,nDir) || cDir == MAGIC_DIR) { // The magic dir skirts around legality
                 pStack.push(nPos);
                 dStack.push(nDir);
                 pathState.setConstraints(pStack,dStack,cStack,pathState);
