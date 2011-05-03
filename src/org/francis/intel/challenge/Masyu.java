@@ -14,7 +14,7 @@ public class Masyu {
         File[] problemFiles = inFile.listFiles();
         for (File problem : problemFiles) {
             PuzzleData puzzle = ProblemReader.parseDimacsFile(problem);
-            byte[] board = makeBoard(puzzle);
+            int[] board = makeBoard(puzzle);
             MasyuSearcher searcher = new MasyuSearcher(puzzle.height, puzzle.width, board);
             long startTime = System.currentTimeMillis();
             String result = searcher.search();
@@ -23,10 +23,10 @@ public class Masyu {
         }
     }
     
-    private static byte[] makeBoard(PuzzleData puzzle) {
+    private static int[] makeBoard(PuzzleData puzzle) {
         int height = puzzle.height;
         int width = puzzle.width;
-        byte[] board = new byte[height*width];
+        int[] board = new int[height*width];
         for (int i = 0; i < puzzle.blackPebbles.size(); i+=2) {
             int row = puzzle.blackPebbles.get(i);
             int col = puzzle.blackPebbles.get(i+1);

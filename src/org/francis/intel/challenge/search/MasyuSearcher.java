@@ -12,7 +12,7 @@ public class MasyuSearcher implements Constants {
     ResizingIntStack cStack;
     public int solutionCount = 0;
     
-    public MasyuSearcher(int height, int width, byte[] board) {
+    public MasyuSearcher(int height, int width, int[] board) {
         assert height*width == board.length;
         pathState = new PathState(board,width,height);
         pStack = new IntStack(pathState.totalSqrs+2);
@@ -81,7 +81,7 @@ public class MasyuSearcher implements Constants {
     }
 
     private void backtrack() {
-        byte nDir = NOTHING_LEFT;
+        int nDir = NOTHING_LEFT;
         do {
             pStack.pop();
             nDir = dStack.pop();
@@ -99,11 +99,11 @@ public class MasyuSearcher implements Constants {
         return pshMove(UP);
     }
     
-    private boolean pshMove(byte initDir) {
+    private boolean pshMove(int initDir) {
         assert pStack.size() == dStack.size();
         assert dStack.size() == cStack.size();
         int cPos = pStack.peek();
-        byte cDir = dStack.peek();
+        int cDir = dStack.peek();
         int nPos = SearchUtils.nxtPos(cPos,cDir,pathState.sPos,pathState.width,pathState.totalSqrs);
         if (nPos == pathState.sPos && cDir != MAGIC_DIR) {
             pStack.push(nPos);
@@ -111,7 +111,7 @@ public class MasyuSearcher implements Constants {
             pathState.setConstraints(pStack,dStack,cStack,pathState);
             return true;
         }
-        for (byte nDir = initDir; nDir < NOTHING_LEFT; nDir++) {
+        for (int nDir = initDir; nDir < NOTHING_LEFT; nDir++) {
             if (nDir == (cDir^1)) continue;
             if (pathState.isForbidden(nPos,nDir)) continue;
             if(pathState.legal(cDir,nPos,nDir) || cDir == MAGIC_DIR) { // The magic dir skirts around legality
