@@ -3,6 +3,7 @@ package org.francis.intel.challenge;
 import java.io.File;
 
 import org.francis.intel.challenge.ProblemReader.PuzzleData;
+import org.francis.intel.challenge.search.MasyuSearchState;
 
 public class Masyu {
 

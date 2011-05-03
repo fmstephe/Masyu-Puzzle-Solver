@@ -1,29 +1,28 @@
-package org.francis.intel.challenge;
+package org.francis.intel.challenge.stack;
 
 import java.util.Arrays;
 
-public class IntStack {
-
-    private final int[] stack;
+public class ByteStack {
+    private final byte[] stack;
     private int idx = 0;
     
-    public IntStack(int size) {
-        stack = new int[size];
+    public ByteStack(int size) {
+        stack = new byte[size];
     }
     
-    public void push(int pInt) {
+    public void push(byte pInt) {
         stack[idx++] = pInt;
     }
     
-    public int pop() {
+    public byte pop() {
         return stack[--idx];
     }
     
-    public int peek() {
+    public byte peek() {
         return stack[idx-1];
     }
     
-    public int peek(int lookback) {
+    public byte peek(int lookback) {
         return stack[idx-(lookback+1)];
     }
     
@@ -33,7 +32,7 @@ public class IntStack {
     
     @Override
     public String toString() {
-        int[] print = new int[idx];
+        byte[] print = new byte[idx];
         System.arraycopy(stack, 0, print, 0, idx);
         return Arrays.toString(print);
     }

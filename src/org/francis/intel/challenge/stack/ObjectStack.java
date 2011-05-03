@@ -1,13 +1,13 @@
-package org.francis.intel.challenge;
+package org.francis.intel.challenge.stack;
 
 import java.util.Arrays;
 
-public class Stack<E> {
+public class ObjectStack<E> {
 
     private final E[] stack;
     private int idx = 0;
     
-    public Stack(int size) {
+    public ObjectStack(int size) {
         stack = (E[])new Object[size];
     }
     

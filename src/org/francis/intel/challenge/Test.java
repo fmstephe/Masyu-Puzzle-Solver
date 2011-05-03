@@ -2,6 +2,8 @@ package org.francis.intel.challenge;
 
 import java.util.Random;
 
+import org.francis.intel.challenge.search.MasyuSearchState;
+
 public class Test {
 
     public static void main(String[] args) {

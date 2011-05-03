@@ -1,4 +1,4 @@
-package org.francis.intel.challenge;
+package org.francis.intel.challenge.stack;
 
 import java.util.Arrays;
 

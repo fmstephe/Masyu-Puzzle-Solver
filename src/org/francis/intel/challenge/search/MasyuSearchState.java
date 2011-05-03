@@ -1,4 +1,8 @@
-package org.francis.intel.challenge;
+package org.francis.intel.challenge.search;
+
+import org.francis.intel.challenge.stack.ByteStack;
+import org.francis.intel.challenge.stack.IntStack;
+import org.francis.intel.challenge.stack.ResizingIntStack;
 
 public class MasyuSearchState {
     
