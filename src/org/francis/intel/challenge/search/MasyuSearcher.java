@@ -1,8 +1,8 @@
 package org.francis.intel.challenge.search;
 
-import org.francis.intel.challenge.stack.LevelStack;
 import org.francis.intel.challenge.stack.IntStack;
-import org.francis.intel.challenge.stack.ResizingIntStack;
+import org.francis.intel.challenge.stack.LevelStack;
+import org.francis.intel.challenge.stack.UnsafeIntStack;
 import org.francis.p2p.worksharing.network.NetworkManager;
 import org.francis.p2p.worksharing.network.WorkSharer;
 
@@ -11,7 +11,7 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
     final PathState pathState;
     final IntStack pStack;
     final LevelStack dStack;
-    final ResizingIntStack cStack;
+    final LevelStack cStack;
     final NetworkManager networkManager;
     int sharableWork;
     boolean primeWorker;
@@ -20,9 +20,9 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
         assert height*width == board.length;
         this.sharableWork = 0;
         this.pathState = new PathState(board,width,height);
-        this.pStack = new IntStack(pathState.totalSqrs+2);
+        this.pStack = new UnsafeIntStack(pathState.totalSqrs+2);
         this.dStack = new LevelStack(5*(pathState.totalSqrs+2));
-        this.cStack = new ResizingIntStack(4*(pathState.totalSqrs+2));
+        this.cStack = new LevelStack(4*(pathState.totalSqrs+2));
         this.networkManager = networkManager;
         this.primeWorker = primeWorker;
     }
@@ -115,7 +115,7 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
     private void pshInit() {
         pStack.push(pathState.sPos);
         pushDirs();
-        cStack.push(0); // Here we add the number of constraints added, not many
+        cStack.sealLevel(); // Here we seal the first - empty - set of constraints
         pathState.setConstraints(pStack,dStack,cStack,pathState);
     }
     

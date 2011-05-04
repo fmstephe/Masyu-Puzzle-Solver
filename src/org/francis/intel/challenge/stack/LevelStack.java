@@ -4,7 +4,7 @@ public class LevelStack {
     
     private int levelCount;
     private int depthCounter;
-    private final ResizingIntStack dStack;
+    private final IntStack dStack;
     
     public LevelStack(int size) {
         levelCount = 0;

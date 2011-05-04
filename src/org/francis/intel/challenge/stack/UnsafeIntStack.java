@@ -2,11 +2,12 @@ package org.francis.intel.challenge.stack;
 
 import java.util.Arrays;
 
-public class ByteStack {
+public class UnsafeIntStack implements IntStack {
+
     private final int[] stack;
     private int idx = 0;
     
-    public ByteStack(int size) {
+    public UnsafeIntStack(int size) {
         stack = new int[size];
     }
     
@@ -24,6 +25,18 @@ public class ByteStack {
     
     public int peek(int lookback) {
         return stack[idx-(lookback+1)];
+    }
+    
+    public int get(int i) {
+        return stack[i];
+    }
+    
+    public int set(int i, int val) {
+        return stack[i] = val;
+    }
+    
+    public void setSize(int size) {
+        this.idx = size;
     }
     
     public int size() {

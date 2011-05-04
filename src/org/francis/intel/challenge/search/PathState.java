@@ -2,7 +2,6 @@ package org.francis.intel.challenge.search;
 
 import org.francis.intel.challenge.stack.IntStack;
 import org.francis.intel.challenge.stack.LevelStack;
-import org.francis.intel.challenge.stack.ResizingIntStack;
 
 public class PathState implements Constants {
     
@@ -52,7 +51,7 @@ public class PathState implements Constants {
         if (boardA[width*(height-1)] == WHITE) return false; // Bottom Left
         if (boardA[boardA.length-1] == WHITE) return false; // Bottom Right
         // Check the sides for white pebbles
-        ResizingIntStack throwAway = new ResizingIntStack(boardA.length);
+        LevelStack throwAway = new LevelStack(boardA.length);
         // Top side
         int inARow = 0;
         for (int i = 0; i < width; i++) {
@@ -184,20 +183,17 @@ public class PathState implements Constants {
         return conCount > 2;
     }
     
-    public void setConstraints(IntStack pStack, LevelStack dStack, ResizingIntStack cStack, PathState pathMask) {
-        int cCount = 0;
+    public void setConstraints(IntStack pStack, LevelStack dStack, LevelStack cStack, PathState pathMask) {
         int nPos = pStack.peek();
         int nDir = dStack.peekVal();
         if (nPos == sPos) {
             pathMask.recordConstrs(nPos,nDir,EMPTY,cStack);
-            cCount++;
         }
         else {
             int bMask = SearchUtils.forbidDir(SearchUtils.complementDir(dStack.peekVal(1)));
             int fMask = SearchUtils.forbidDir(nDir);
             int mask = CLOSED ^ bMask ^ fMask;
             pathMask.recordConstrs(nPos,nDir,mask,cStack);
-            cCount++;
         }
         if (pStack.size() > 2 && boardA[nPos] == WHITE) {
             int pDir = dStack.peekVal(1);
@@ -206,19 +202,16 @@ public class PathState implements Constants {
             if (nDir == pDir && pDir == ppDir) {
                 int nnPos = SearchUtils.nxtPos(nPos,nDir,width,boardA.length);
                 pathMask.recordConstrs(nnPos,EMPTY,SearchUtils.forbidDir(nDir),cStack);
-                cCount++;
             }
         }
         else if (pStack.size() == 1) {
             // We left the white pebble, add constraints for entering the white pebble
             if (boardA[nPos] == WHITE) {
                 pathMask.recordConstrs(nPos,EMPTY,SearchUtils.forbidPerpendicular(nDir),cStack);
-                cCount++;
             }
             // We left the black pebble, add constraints for entering the black pebble
             else if (boardA[nPos] == BLACK) {
                 pathMask.recordConstrs(nPos,EMPTY,SearchUtils.forbidDir(SearchUtils.complementDir(nDir)),cStack);
-                cCount++;
             }
         }
         else if (pStack.size() == 2) {
@@ -229,23 +222,21 @@ public class PathState implements Constants {
                 int ppDir = SearchUtils.complementDir(nDir);
                 int ppPos = SearchUtils.nxtPos(pPos,ppDir,width,boardA.length);
                 pathMask.recordConstrs(ppPos,EMPTY,SearchUtils.forbidDir(ppDir),cStack);
-                cCount++;
                 // We started on a white pebble and moved immediately to another one, add constraints for exiting the second white pebble
                 if (boardA[nPos] == WHITE) {
                     int nnPos = SearchUtils.nxtPos(nPos,nDir,width,boardA.length);
                     pathMask.recordConstrs(nnPos,EMPTY,SearchUtils.forbidDir(nDir),cStack);
-                    cCount++;
                 }
             }
         }
-        cStack.push(cCount);
+        cStack.sealLevel();
     }
     
-    public void recordConstrs(int pos, int dir, int fFlags, ResizingIntStack cStack) {
+    public void recordConstrs(int pos, int dir, int fFlags, LevelStack cStack) {
         int newMask = (pathMaskA[pos] | fFlags | dir);
         assert (pathMaskA[pos]&newMask) == pathMaskA[pos];
-        cStack.push(pos);
-        cStack.push(pathMaskA[pos]);
+        cStack.pushVal(pos);
+        cStack.pushVal(pathMaskA[pos]);
         pathMaskA[pos] = newMask;
         assert checkBoardState();
     }
@@ -267,11 +258,10 @@ public class PathState implements Constants {
         return true;
     }
 
-    public void backtrackConstraints(ResizingIntStack cStack) {
-        int count = cStack.pop();
-        for (; count > 0; count--) {
-            int maskState = cStack.pop();
-            int pos = cStack.pop();
+    public void backtrackConstraints(LevelStack cStack) {
+        while (!cStack.clearLevelIfEmpty()) {
+            int maskState = cStack.popVal();
+            int pos = cStack.popVal();
             pathMaskA[pos] = maskState;
         }
     }
