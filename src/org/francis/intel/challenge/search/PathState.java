@@ -140,7 +140,7 @@ public class PathState implements Constants {
         int mask = SearchUtils.forbidDir(dir);
         if ((pathMaskA[pos] & mask) == mask)
             return true;
-        int nPos = SearchUtils.nxtPos(pos,dir,sPos,width,boardA.length);
+        int nPos = SearchUtils.nxtPos(pos,dir,width,boardA.length);
         if (nPos >= 0) {
             mask = SearchUtils.forbidDir(SearchUtils.complementDir(dir));
             if ((pathMaskA[nPos] & mask) == mask)
@@ -150,7 +150,7 @@ public class PathState implements Constants {
     }
     
     public boolean legal(int cPos, int cDir, int nPos, int nDir) {
-        if (cDir != MAGIC_DIR && !checkSurroundingConstraints(cPos)) return false;
+        if (!checkSurroundingConstraints(cPos)) return false;
         if (boardA[nPos] == WHITE) return cDir == nDir; // Must pass straight through a white pebble
         else if (boardA[nPos] == BLACK) return cDir != nDir; // This indicates a nice right angle turn
         else return true;
@@ -158,7 +158,7 @@ public class PathState implements Constants {
     
     private boolean checkSurroundingConstraints(int pos) {
         for (int dir = UP; dir < NOTHING_LEFT; dir++) {
-            int nPos = SearchUtils.nxtPos(pos, dir, -1, width, totalSqrs);
+            int nPos = SearchUtils.nxtPos(pos, dir, width, totalSqrs);
             if (nPos >= 0) {
                 if (isOverConstrained(nPos)) {
                     return false; 
@@ -176,7 +176,7 @@ public class PathState implements Constants {
         for (int dir = UP; dir < NOTHING_LEFT; dir++) {
             int forbidDir = SearchUtils.forbidDir(dir);
             int forbidCDir = SearchUtils.forbidDir(SearchUtils.complementDir(dir));
-            if ((mask & forbidDir) == forbidDir || (pathMaskA[SearchUtils.nxtPos(pos, dir, -1, width, totalSqrs)] & forbidCDir) == forbidCDir) {
+            if ((mask & forbidDir) == forbidDir || (pathMaskA[SearchUtils.nxtPos(pos, dir, width, totalSqrs)] & forbidCDir) == forbidCDir) {
                 conCount++;
             }
         }
@@ -199,17 +199,17 @@ public class PathState implements Constants {
             pathMask.recordConstrs(nPos,nDir,mask,cStack);
             cCount++;
         }
-        if (pStack.size() > 3 && boardA[nPos] == WHITE) {
+        if (pStack.size() > 2 && boardA[nPos] == WHITE) {
             int pDir = dStack.peekVal(1);
             int ppDir = dStack.peekVal(2);
             // We came straight in - add some constraints for the exit
             if (nDir == pDir && pDir == ppDir) {
-                int nnPos = SearchUtils.nxtPos(nPos,nDir,sPos,width,boardA.length);
+                int nnPos = SearchUtils.nxtPos(nPos,nDir,width,boardA.length);
                 pathMask.recordConstrs(nnPos,EMPTY,SearchUtils.forbidDir(nDir),cStack);
                 cCount++;
             }
         }
-        else if (pStack.size() == 2) {
+        else if (pStack.size() == 1) {
             // We left the white pebble, add constraints for entering the white pebble
             if (boardA[nPos] == WHITE) {
                 pathMask.recordConstrs(nPos,EMPTY,SearchUtils.forbidPerpendicular(nDir),cStack);
@@ -221,18 +221,18 @@ public class PathState implements Constants {
                 cCount++;
             }
         }
-        else if (pStack.size() == 3) {
+        else if (pStack.size() == 2) {
             int pPos = pStack.peek(1);
             int pDir = dStack.peekVal(1);
             // We left the white pebble and went straight, add constraints for turning before entering the white pebble
             if (boardA[pPos] == WHITE && nDir == pDir) {
                 int ppDir = SearchUtils.complementDir(nDir);
-                int ppPos = SearchUtils.nxtPos(pPos,ppDir,sPos,width,boardA.length);
+                int ppPos = SearchUtils.nxtPos(pPos,ppDir,width,boardA.length);
                 pathMask.recordConstrs(ppPos,EMPTY,SearchUtils.forbidDir(ppDir),cStack);
                 cCount++;
                 // We started on a white pebble and moved immediately to another one, add constraints for exiting the second white pebble
                 if (boardA[nPos] == WHITE) {
-                    int nnPos = SearchUtils.nxtPos(nPos,nDir,sPos,width,boardA.length);
+                    int nnPos = SearchUtils.nxtPos(nPos,nDir,width,boardA.length);
                     pathMask.recordConstrs(nnPos,EMPTY,SearchUtils.forbidDir(nDir),cStack);
                     cCount++;
                 }
@@ -254,7 +254,7 @@ public class PathState implements Constants {
         for (int pos = 0; pos < pathMaskA.length; pos++) {
             int dir = pathMaskA[pos] & MASK_PATH;
             if (dir != 0) { 
-                int nPos = SearchUtils.nxtPos(pos, dir, -1, width, totalSqrs);
+                int nPos = SearchUtils.nxtPos(pos,dir,width,totalSqrs);
                 if (nPos >= 0) {
                     int forbidMask = SearchUtils.forbidDir(SearchUtils.complementDir(dir));
                     if ((pathMaskA[nPos] & forbidMask) == forbidMask) {

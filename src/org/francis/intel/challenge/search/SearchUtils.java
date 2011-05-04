@@ -21,7 +21,7 @@ public class SearchUtils implements Constants {
         return (forbidMask ^ forbidCMask ^ MASK_CONSTRS);
     }
     
-    public static int nxtPos(int pos, int dir, int sPos, int width, int totalLength) {
+    public static int nxtPos(int pos, int dir, int width, int totalLength) {
         switch (dir) {
             case UP :
                 return pos-width;
@@ -34,8 +34,6 @@ public class SearchUtils implements Constants {
             case RIGHT : 
                 col = pos%width;
                 return col == width-1 ? -1 : pos+1;
-            case MAGIC_DIR & MASK_DIR :
-                return sPos;
             default : throw new IllegalArgumentException();
         }
     }

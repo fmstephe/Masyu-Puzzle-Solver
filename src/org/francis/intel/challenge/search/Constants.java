@@ -14,9 +14,6 @@ public interface Constants {
     public static final int LEFT = 4;
     public static final int RIGHT = 5;
     public static final int NOTHING_LEFT = 6;
-    public static final int MAGIC_DIR = -1; // This direction always magically points to the starting position
-    public static final int FILTERED_MAGIC_DIR = Integer.MAX_VALUE; // This is the magic dir with it's 'shared' flag removed
-    public static final int MAGIC_POS = -1; // This position does not exist on the board, but accompanies the magic_dir above
     public static final int NOT_UP = 16;
     public static final int NOT_DOWN = 32;
     public static final int NOT_LEFT = 64;

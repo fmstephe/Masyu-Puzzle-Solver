@@ -22,9 +22,8 @@ public class LevelStack {
         int peekIdx = 0;
         while (backCount < backLook) {
             int depth = dStack.peek(peekIdx);
-            assert depth != 0;
             peekIdx += depth+1;
-            backLook++;
+            backCount++;
         }
         return dStack.peek(peekIdx+1);
     }

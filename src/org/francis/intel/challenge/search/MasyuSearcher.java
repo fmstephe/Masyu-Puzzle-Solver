@@ -49,6 +49,7 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
 //            }
             if (pStack.size() == 0) {
                 System.out.println("Number of Solutions = "+solutionCount);
+                networkManager.manageNetwork(this);
                 return;
             }
 //            System.out.println(pathState.toString());
@@ -66,7 +67,7 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
                     System.out.println("Solution Found!");
                 }
                 pStack.pop();
-                dStack.popVal();
+                dStack.clearLevel();
                 pathState.backtrackConstraints(cStack);
                 backtrack();
                 continue;
@@ -99,46 +100,69 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
 
     private void backtrack() {
         while (true) {
+            assert dStack.levels() == pStack.size();
             dStack.popVal();
             pathState.backtrackConstraints(cStack);
+            assert dStack.levels() == pStack.size();
+            if (brnchMove()) return;
+            assert dStack.levels() != pStack.size();
+            pStack.pop();
+            assert dStack.levels() == pStack.size();
             if (pStack.size() == 0) return;
-            if (pshMove()) return;
-            }
-                
         }
     }
     
     private void pshInit() {
-        pStack.push(MAGIC_POS);
-        dStack.pushVal(MAGIC_DIR);
-        dStack.sealLevel();
+        pStack.push(pathState.sPos);
+        pushDirs();
         cStack.push(0); // Here we add the number of constraints added, not many
+        pathState.setConstraints(pStack,dStack,cStack,pathState);
     }
-
+    
+    private boolean brnchMove() {
+        assert pStack.size() > 0;
+        assert dStack.levels() > 0;
+        int cPos = pStack.peek();
+        assert (cPos != pathState.sPos || pStack.size() == 1);
+        while (!dStack.clearLevelIfEmpty()) {
+            int cDir = dStack.peekVal();
+            if ((pStack.size() == 1 || cDir != (dStack.peekVal(1)^1)) && !pathState.isForbidden(cPos,cDir)) {
+                if(pStack.size() == 1 || pathState.legal(pStack.peek(1),dStack.peekVal(1),cPos,cDir)) { // The initial position push doesn't obey the law
+                    pathState.setConstraints(pStack,dStack,cStack,pathState);
+                    assert pStack.size() == dStack.levels();
+                    return true;
+                }
+            }
+            dStack.popVal();
+        }
+        return false;
+    }
+    
     private boolean pshMove() {
         int cPos = pStack.peek();
         int cDir = dStack.peekVal();
-        int nPos = SearchUtils.nxtPos(cPos,cDir,pathState.sPos,pathState.width,pathState.totalSqrs);
-        if (nPos == pathState.sPos && cDir != FILTERED_MAGIC_DIR) {
+        int nPos = SearchUtils.nxtPos(cPos,cDir,pathState.width,pathState.totalSqrs);
+        if (nPos == pathState.sPos && pStack.size() != 1) {
             pStack.push(nPos);
             dStack.pushVal(EMPTY);
             dStack.sealLevel();
-            assert verifyWorkSize();
             pathState.setConstraints(pStack,dStack,cStack,pathState);
             return true;
         }
         pushDirs();
         while (!dStack.clearLevelIfEmpty()) {
             int nDir = dStack.peekVal();
-            if (nDir == (cDir^1)) continue;
-            if (pathState.isForbidden(nPos,nDir)) continue;
-            if(pathState.legal(cPos,cDir,nPos,nDir) || cDir == FILTERED_MAGIC_DIR) { // The magic dir skirts around legality
-                pStack.push(nPos);
-                pathState.setConstraints(pStack,dStack,cStack,pathState);
-                assert pStack.size() == dStack.levels();
-                return true;
+            if (!(nDir == (cDir^1)) && !pathState.isForbidden(nPos,nDir)) {
+                if(pathState.legal(cPos,cDir,nPos,nDir) || pStack.size() == 1) { // The initial position push doesn't obey the law
+                    pStack.push(nPos);
+                    pathState.setConstraints(pStack,dStack,cStack,pathState);
+                    assert pStack.size() == dStack.levels();
+                    return true;
+                }
             }
+            dStack.popVal();
         }
+        assert pStack.size() == dStack.levels();
         return false;
     }
     
