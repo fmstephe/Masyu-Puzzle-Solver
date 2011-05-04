@@ -1,6 +1,7 @@
 package org.francis.intel.challenge.search;
 
 import org.francis.intel.challenge.stack.IntStack;
+import org.francis.intel.challenge.stack.LevelStack;
 import org.francis.intel.challenge.stack.ResizingIntStack;
 
 public class PathState implements Constants {
@@ -183,24 +184,24 @@ public class PathState implements Constants {
         return conCount > 2;
     }
     
-    public void setConstraints(IntStack pStack, IntStack dStack, ResizingIntStack cStack, PathState pathMask) {
+    public void setConstraints(IntStack pStack, LevelStack dStack, ResizingIntStack cStack, PathState pathMask) {
         int cCount = 0;
         int nPos = pStack.peek();
-        int nDir = dStack.peek();
+        int nDir = dStack.peekVal();
         if (nPos == sPos) {
             pathMask.recordConstrs(nPos,nDir,EMPTY,cStack);
             cCount++;
         }
         else {
-            int bMask = SearchUtils.forbidDir(SearchUtils.complementDir(dStack.peek(1)));
+            int bMask = SearchUtils.forbidDir(SearchUtils.complementDir(dStack.peekVal(1)));
             int fMask = SearchUtils.forbidDir(nDir);
             int mask = CLOSED ^ bMask ^ fMask;
             pathMask.recordConstrs(nPos,nDir,mask,cStack);
             cCount++;
         }
-        if (dStack.size() > 3 && boardA[nPos] == WHITE) {
-            int pDir = dStack.peek(1);
-            int ppDir = dStack.peek(2);
+        if (pStack.size() > 3 && boardA[nPos] == WHITE) {
+            int pDir = dStack.peekVal(1);
+            int ppDir = dStack.peekVal(2);
             // We came straight in - add some constraints for the exit
             if (nDir == pDir && pDir == ppDir) {
                 int nnPos = SearchUtils.nxtPos(nPos,nDir,sPos,width,boardA.length);
@@ -208,7 +209,7 @@ public class PathState implements Constants {
                 cCount++;
             }
         }
-        else if (dStack.size() == 2) {
+        else if (pStack.size() == 2) {
             // We left the white pebble, add constraints for entering the white pebble
             if (boardA[nPos] == WHITE) {
                 pathMask.recordConstrs(nPos,EMPTY,SearchUtils.forbidPerpendicular(nDir),cStack);
@@ -220,9 +221,9 @@ public class PathState implements Constants {
                 cCount++;
             }
         }
-        else if (dStack.size() == 3) {
+        else if (pStack.size() == 3) {
             int pPos = pStack.peek(1);
-            int pDir = dStack.peek(1);
+            int pDir = dStack.peekVal(1);
             // We left the white pebble and went straight, add constraints for turning before entering the white pebble
             if (boardA[pPos] == WHITE && nDir == pDir) {
                 int ppDir = SearchUtils.complementDir(nDir);

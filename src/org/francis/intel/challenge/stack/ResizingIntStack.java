@@ -39,6 +39,10 @@ public class ResizingIntStack {
         return idx;
     }
     
+    public void setSize(int size) {
+        this.idx = size;
+    }
+    
     @Override
     public String toString() {
         int[] print = new int[idx];

@@ -1,5 +1,6 @@
 package org.francis.intel.challenge.search;
 
+import org.francis.intel.challenge.stack.LevelStack;
 import org.francis.intel.challenge.stack.IntStack;
 import org.francis.intel.challenge.stack.ResizingIntStack;
 import org.francis.p2p.worksharing.network.NetworkManager;
@@ -9,7 +10,7 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
     
     final PathState pathState;
     final IntStack pStack;
-    final IntStack dStack;
+    final LevelStack dStack;
     final ResizingIntStack cStack;
     final NetworkManager networkManager;
     int sharableWork;
@@ -20,7 +21,7 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
         this.sharableWork = 0;
         this.pathState = new PathState(board,width,height);
         this.pStack = new IntStack(pathState.totalSqrs+2);
-        this.dStack = new IntStack(pathState.totalSqrs+2);
+        this.dStack = new LevelStack(5*(pathState.totalSqrs+2));
         this.cStack = new ResizingIntStack(4*(pathState.totalSqrs+2));
         this.networkManager = networkManager;
         this.primeWorker = primeWorker;
@@ -65,8 +66,7 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
                     System.out.println("Solution Found!");
                 }
                 pStack.pop();
-                int dir = dStack.pop();
-                if (!SearchUtils.isSharedDir(dir)) sharableWork--; 
+                dStack.popVal();
                 pathState.backtrackConstraints(cStack);
                 backtrack();
                 continue;
@@ -82,8 +82,8 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
         builder.append((getRow(pathState.sPos)+1)+" "+(getCol(pathState.sPos)+1));
         builder.append(newLine);
         int count = 0;
-        for (int i = dStack.size()-1; i >= 0; i--) {
-            switch (SearchUtils.filterDir(dStack.peek(i))) {
+        for (int i = dStack.levels()-1; i >= 0; i--) {
+            switch (dStack.peekVal(i)) {
                 case UP : builder.append("U"); break;
                 case DOWN : builder.append("D"); break;
                 case LEFT : builder.append("L"); break;
@@ -105,7 +105,7 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
             if (pStack.size() == 0) return;
             if (!SearchUtils.isSharedDir(dir)) {
                 sharableWork--;
-                if (pshMove(++dir)) return;
+                if (pshMove(++dir)) return; // TODO May have to fiddle the dStack for this - hopefully not
             }
                 
         }
@@ -113,23 +113,19 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
     
     private void pshInit() {
         pStack.push(MAGIC_POS);
-        dStack.push(MAGIC_DIR);
+        dStack.pushVal(MAGIC_DIR);
+        dStack.sealLevel();
         cStack.push(0); // Here we add the number of constraints added, not many
     }
 
     private boolean pshMove() {
-        return pshMove(UP);
-    }
-    
-    private boolean pshMove(int initDir) {
-        assert pStack.size() == dStack.size();
         int cPos = pStack.peek();
-        int cDir = SearchUtils.filterDir(dStack.peek());
+        int cDir = dStack.peekVal();
         int nPos = SearchUtils.nxtPos(cPos,cDir,pathState.sPos,pathState.width,pathState.totalSqrs);
         if (nPos == pathState.sPos && cDir != FILTERED_MAGIC_DIR) {
             pStack.push(nPos);
-            dStack.push(EMPTY);
-            sharableWork++;
+            dStack.pushVal(EMPTY);
+            dStack.sealLevel();
             assert verifyWorkSize();
             pathState.setConstraints(pStack,dStack,cStack,pathState);
             return true;
@@ -150,7 +146,6 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
     }
     
     private void pshMoveReceivedWork(int dir) {
-        assert pStack.size() == dStack.size();
         if (dir == FILTERED_MAGIC_DIR) {
             pStack.push(MAGIC_POS);
             dStack.push(MAGIC_DIR);
@@ -234,7 +229,7 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
         }
         return workSizeCount == sharableWork;
     }
-
+    
     @Override
     public void receiveWork(Object rStack) {
         assert dStack.size() == 0;
@@ -255,8 +250,7 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
 
     @Override
     public boolean needsWork() {
-        assert pStack.size() == dStack.size();
-        return dStack.size() == 0;
+        return pStack.size() == 0;
     }
 
     @Override
