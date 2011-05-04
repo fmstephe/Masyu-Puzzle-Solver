@@ -99,13 +99,10 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
 
     private void backtrack() {
         while (true) {
-            pStack.pop();
-            int dir = dStack.pop();
+            dStack.popVal();
             pathState.backtrackConstraints(cStack);
             if (pStack.size() == 0) return;
-            if (!SearchUtils.isSharedDir(dir)) {
-                sharableWork--;
-                if (pshMove(++dir)) return; // TODO May have to fiddle the dStack for this - hopefully not
+            if (pshMove()) return;
             }
                 
         }
@@ -130,42 +127,50 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
             pathState.setConstraints(pStack,dStack,cStack,pathState);
             return true;
         }
-        for (int nDir = initDir; nDir < NOTHING_LEFT; nDir++) {
+        pushDirs();
+        while (!dStack.clearLevelIfEmpty()) {
+            int nDir = dStack.peekVal();
             if (nDir == (cDir^1)) continue;
             if (pathState.isForbidden(nPos,nDir)) continue;
-            if(pathState.legal(dStack,cPos,cDir,nPos,nDir) || cDir == FILTERED_MAGIC_DIR) { // The magic dir skirts around legality
+            if(pathState.legal(cPos,cDir,nPos,nDir) || cDir == FILTERED_MAGIC_DIR) { // The magic dir skirts around legality
                 pStack.push(nPos);
-                dStack.push(nDir);
-                sharableWork++;
-                assert verifyWorkSize();
                 pathState.setConstraints(pStack,dStack,cStack,pathState);
+                assert pStack.size() == dStack.levels();
                 return true;
             }
         }
         return false;
     }
     
-    private void pshMoveReceivedWork(int dir) {
-        if (dir == FILTERED_MAGIC_DIR) {
-            pStack.push(MAGIC_POS);
-            dStack.push(MAGIC_DIR);
-            cStack.push(0);
-            return;
-        }
-        int cPos = pStack.peek();
-        int cDir = SearchUtils.filterDir(dStack.peek());
-        int nPos = SearchUtils.nxtPos(cPos,cDir,pathState.sPos,pathState.width,pathState.totalSqrs);
-        assert dir != (cDir^1);
-        assert !pathState.isForbidden(nPos,dir);
-        assert pathState.legal(dStack,cPos,cDir,nPos,dir) || cDir == MAGIC_DIR; // The magic dir skirts around legality
-        pStack.push(nPos);
-        dStack.push(dir);
-        if ((dir & MASK_SHARED) != MASK_SHARED) {
-            sharableWork++;
-            assert verifyWorkSize();
-        }
-        pathState.setConstraints(pStack,dStack,cStack,pathState);
+    private void pushDirs() {
+        dStack.pushVal(UP);
+        dStack.pushVal(DOWN);
+        dStack.pushVal(LEFT);
+        dStack.pushVal(RIGHT);
+        dStack.sealLevel();
     }
+    
+//    private void pshMoveReceivedWork(int dir) {
+//        if (dir == FILTERED_MAGIC_DIR) {
+//            pStack.push(MAGIC_POS);
+//            dStack.push(MAGIC_DIR);
+//            cStack.push(0);
+//            return;
+//        }
+//        int cPos = pStack.peek();
+//        int cDir = SearchUtils.filterDir(dStack.peek());
+//        int nPos = SearchUtils.nxtPos(cPos,cDir,pathState.sPos,pathState.width,pathState.totalSqrs);
+//        assert dir != (cDir^1);
+//        assert !pathState.isForbidden(nPos,dir);
+//        assert pathState.legal(dStack,cPos,cDir,nPos,dir) || cDir == MAGIC_DIR; // The magic dir skirts around legality
+//        pStack.push(nPos);
+//        dStack.push(dir);
+//        if ((dir & MASK_SHARED) != MASK_SHARED) {
+//            sharableWork++;
+//            assert verifyWorkSize();
+//        }
+//        pathState.setConstraints(pStack,dStack,cStack,pathState);
+//    }
     
     private boolean returned() {
         return pStack.peek() == pathState.sPos;
@@ -186,43 +191,44 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
 
     @Override
     public Object giveWork() {
-        assert verifyWorkSize();
-        IntStack sharedStack = new IntStack(dStack.size());
-        boolean share = sharableWork%2 == 0;
-        int shareTarget = sharableWork-1;
-        int shareCount = 0;
-        int i = 0;
-        for (;i < dStack.size(); i++) {
-            int dir = dStack.get(i);
-            if (!SearchUtils.isSharedDir(dir)) {
-                if (shareCount == shareTarget) {
-                    assert !share;
-                    break; // This is done to prevent the last unshared branchable element from being shared
-                }
-                if (share) {
-                    sharedStack.set(i,dir);
-                    dStack.set(i,SearchUtils.makeSharedDir(dir));
-                    sharableWork--;
-                }
-                else {
-                    sharedStack.set(i,SearchUtils.makeSharedDir(dir));
-                }
-                share = !share;
-                shareCount++;
-            }
-            else {
-                sharedStack.set(i,dir);
-            }
-        }
-        sharedStack.setSize(i);
-        assert verifyWorkSize();
-        return sharedStack;
+//        assert verifyWorkSize();
+//        IntStack sharedStack = new IntStack(dStack.size());
+//        boolean share = sharableWork%2 == 0;
+//        int shareTarget = sharableWork-1;
+//        int shareCount = 0;
+//        int i = 0;
+//        for (;i < dStack.size(); i++) {
+//            int dir = dStack.get(i);
+//            if (!SearchUtils.isSharedDir(dir)) {
+//                if (shareCount == shareTarget) {
+//                    assert !share;
+//                    break; // This is done to prevent the last unshared branchable element from being shared
+//                }
+//                if (share) {
+//                    sharedStack.set(i,dir);
+//                    dStack.set(i,SearchUtils.makeSharedDir(dir));
+//                    sharableWork--;
+//                }
+//                else {
+//                    sharedStack.set(i,SearchUtils.makeSharedDir(dir));
+//                }
+//                share = !share;
+//                shareCount++;
+//            }
+//            else {
+//                sharedStack.set(i,dir);
+//            }
+//        }
+//        sharedStack.setSize(i);
+//        assert verifyWorkSize();
+//        return sharedStack;
+        return null;
     }
     
     private boolean verifyWorkSize() {
         int workSizeCount = 0;
-        for (int i = 0; i < dStack.size(); i++) {
-            int dir = dStack.peek(i);
+        for (int i = 0; i < dStack.levels(); i++) {
+            int dir = dStack.peekVal(i);
             if (!SearchUtils.isSharedDir(dir)) {
                 workSizeCount++;
             }
@@ -232,14 +238,14 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
     
     @Override
     public void receiveWork(Object rStack) {
-        assert dStack.size() == 0;
-        assert pStack.size() == 0;
-        assert cStack.size() == 0;
-        IntStack stack = (IntStack)rStack;
-        for (int i = 0; i < stack.size(); i++) {
-            int dir = stack.get(i);
-            pshMoveReceivedWork(SearchUtils.filterDir(dir));
-        }
+//        assert dStack.levels() == 0;
+//        assert pStack.size() == 0;
+//        assert cStack.size() == 0;
+//        IntStack stack = (IntStack)rStack;
+//        for (int i = 0; i < stack.size(); i++) {
+//            int dir = stack.get(i);
+//            pshMoveReceivedWork(SearchUtils.filterDir(dir));
+//        }
     }
 
     @Override

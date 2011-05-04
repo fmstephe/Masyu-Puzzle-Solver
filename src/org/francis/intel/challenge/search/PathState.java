@@ -149,7 +149,7 @@ public class PathState implements Constants {
         return false;
     }
     
-    public boolean legal(IntStack dStack, int cPos, int cDir, int nPos, int nDir) {
+    public boolean legal(int cPos, int cDir, int nPos, int nDir) {
         if (cDir != MAGIC_DIR && !checkSurroundingConstraints(cPos)) return false;
         if (boardA[nPos] == WHITE) return cDir == nDir; // Must pass straight through a white pebble
         else if (boardA[nPos] == BLACK) return cDir != nDir; // This indicates a nice right angle turn
