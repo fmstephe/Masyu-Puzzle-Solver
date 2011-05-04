@@ -229,7 +229,7 @@ public class PathState implements Constants {
                 }
             }
         }
-        cStack.sealLevel();
+        cStack.finishLevel();
     }
     
     public void recordConstrs(int pos, int dir, int fFlags, LevelStack cStack) {

@@ -42,7 +42,7 @@ public class LevelStack {
         return dir;
     }
     
-    public void sealLevel() {
+    public void finishLevel() {
         dStack.push(depthCounter);
         depthCounter = 0;
         levelCount++;
@@ -55,16 +55,16 @@ public class LevelStack {
         levelCount--;
     }
     
-    public boolean isEmptyLevel() {
-        return dStack.peek() == 0;
-    }
-    
     public boolean clearLevelIfEmpty() {
         if (isEmptyLevel()) {
             clearLevel();
             return true;
         }
         return false;
+    }
+    
+    public boolean isEmptyLevel() {
+        return dStack.peek() == 0;
     }
     
     public int levels() {

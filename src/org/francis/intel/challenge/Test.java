@@ -5,8 +5,8 @@ import org.francis.intel.challenge.search.MasyuSearcher;
 public class Test {
 
     public static void main(String[] args) {
-        int height = 3;
-        int width = 3;
+        int height = 5;
+        int width = 5;
         int[] board = makeBoard(height,width);
         SMPThreadedMasyuSolverFactory factory = new SMPThreadedMasyuSolverFactory(height, width, board);
         factory.createAndRunSolversLocal(1, 2, null);
@@ -18,9 +18,9 @@ public class Test {
             board[0] = 0;
         }
         board[4] = MasyuSearcher.BLACK;
-//        board[14] = MasyuSearcher.WHITE;
-//        board[7] = MasyuSearcher.WHITE;
-//        board[13] = MasyuSearcher.WHITE;
+        board[14] = MasyuSearcher.WHITE;
+        board[7] = MasyuSearcher.WHITE;
+        board[13] = MasyuSearcher.WHITE;
         return board;
     }
 }

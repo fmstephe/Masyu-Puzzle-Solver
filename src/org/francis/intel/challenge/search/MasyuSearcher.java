@@ -115,7 +115,7 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
     private void pshInit() {
         pStack.push(pathState.sPos);
         pushDirs();
-        cStack.sealLevel(); // Here we seal the first - empty - set of constraints
+        cStack.finishLevel(); // Here we seal the first - empty - set of constraints
         pathState.setConstraints(pStack,dStack,cStack,pathState);
     }
     
@@ -141,14 +141,7 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
     private boolean pshMove() {
         int cPos = pStack.peek();
         int cDir = dStack.peekVal();
-        int nPos = SearchUtils.nxtPos(cPos,cDir,pathState.width,pathState.totalSqrs);
-        if (nPos == pathState.sPos && pStack.size() != 1) {
-            pStack.push(nPos);
-            dStack.pushVal(EMPTY);
-            dStack.sealLevel();
-            pathState.setConstraints(pStack,dStack,cStack,pathState);
-            return true;
-        }
+        int nPos = SearchUtils.nxtPos(cPos, cDir, pathState.width, pathState.totalSqrs);
         pushDirs();
         while (!dStack.clearLevelIfEmpty()) {
             int nDir = dStack.peekVal();
@@ -161,7 +154,7 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
                 }
             }
             dStack.popVal();
-        }
+        } 
         assert pStack.size() == dStack.levels();
         return false;
     }
@@ -171,7 +164,7 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
         dStack.pushVal(DOWN);
         dStack.pushVal(LEFT);
         dStack.pushVal(RIGHT);
-        dStack.sealLevel();
+        dStack.finishLevel();
     }
     
 //    private void pshMoveReceivedWork(int dir) {
@@ -197,7 +190,8 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
 //    }
     
     private boolean returned() {
-        return pStack.peek() == pathState.sPos;
+        int nxtPos = SearchUtils.nxtPos(pStack.peek(),dStack.peekVal(),pathState.width,pathState.totalSqrs);
+        return nxtPos == pathState.sPos;
     }
 
     private int getRow(int pos) {
