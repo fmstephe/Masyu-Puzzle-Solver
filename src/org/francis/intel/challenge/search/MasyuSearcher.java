@@ -13,7 +13,6 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
     final ResizingIntStack cStack;
     final NetworkManager networkManager;
     int sharableWork;
-    int solutionCount = 0;
     boolean primeWorker;
     
     public MasyuSearcher(int height, int width, int[] board, NetworkManager networkManager, boolean primeWorker) {
@@ -33,31 +32,36 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
     }
     
     public void search() {
-        StringBuilder result = new StringBuilder();
-        System.out.println(pathState);
+        int solutionCount = 0;
         if (primeWorker) {
             pshInit();
+            System.out.println(pathState);
             if (pathState.triviallyUnsolvable)
                 networkManager.triviallyUnsolvable(this);
         }
-        int commCountdown = primeWorker ? 5 : 0;
+//        int commCountdown = primeWorker ? 5 : 0;
         while (true) {
-            if (pStack.size() == 0 || commCountdown <= 0) {
-                if (!networkManager.manageNetwork(this))
-                    return;
-                commCountdown = 5;
+//            if (pStack.size() == 0 || commCountdown <= 0) {
+//                if (!networkManager.manageNetwork(this))
+//                    return;
+//                commCountdown = 5;
+//            }
+            if (pStack.size() == 0) {
+                System.out.println("Number of Solutions = "+solutionCount);
+                return;
             }
-            System.out.println(pathState.toString());
+//            System.out.println(pathState.toString());
             if (pStack.size() > 2 && returned()) {
                 if (pathState.complete()) {
+                    System.out.println("Solution Found by " + Thread.currentThread());
+//                    if(!networkManager.manageNetwork(this))
+//                        return;
                     solutionCount++;
                     System.out.println();
                     System.out.println("Solution Found!");
                     System.out.println();System.out.println();
                     System.out.print(pathState);
                     System.out.println(printSolution());
-                    result.append(printSolution());
-                    result.append(System.getProperty("line.separator"));
                     System.out.println("Solution Found!");
                 }
                 pStack.pop();
@@ -68,7 +72,7 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
                 continue;
             }
             if (!pshMove()) backtrack();
-            commCountdown--;
+//            commCountdown--;
         }
     }
     
@@ -94,7 +98,6 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
     }
 
     private void backtrack() {
-        int nDir = NOTHING_LEFT;
         while (true) {
             pStack.pop();
             int dir = dStack.pop();
@@ -102,7 +105,7 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
             if (pStack.size() == 0) return;
             if (!SearchUtils.isSharedDir(dir)) {
                 sharableWork--;
-                if (!pshMove(++nDir)) return;
+                if (pshMove(++dir)) return;
             }
                 
         }

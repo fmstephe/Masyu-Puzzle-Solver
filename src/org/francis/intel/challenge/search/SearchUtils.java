@@ -15,6 +15,12 @@ public class SearchUtils implements Constants {
         return (forbidMask ^ MASK_CONSTRS);
     }
     
+    public static int forbidPerpendicular(int dir) {
+        int forbidMask = (int)(1 << (dir+LEFT_SHIFT_OFFSET));
+        int forbidCMask = (int)(1 << (complementDir(dir)+LEFT_SHIFT_OFFSET));
+        return (forbidMask ^ forbidCMask ^ MASK_CONSTRS);
+    }
+    
     public static int nxtPos(int pos, int dir, int sPos, int width, int totalLength) {
         switch (dir) {
             case UP :

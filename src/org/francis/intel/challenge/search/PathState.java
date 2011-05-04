@@ -211,7 +211,7 @@ public class PathState implements Constants {
         else if (dStack.size() == 2) {
             // We left the white pebble, add constraints for entering the white pebble
             if (boardA[nPos] == WHITE) {
-                pathMask.recordConstrs(nPos,EMPTY,SearchUtils.allowOnlyDir(SearchUtils.complementDir(nDir)),cStack);
+                pathMask.recordConstrs(nPos,EMPTY,SearchUtils.forbidPerpendicular(nDir),cStack);
                 cCount++;
             }
             // We left the black pebble, add constraints for entering the black pebble

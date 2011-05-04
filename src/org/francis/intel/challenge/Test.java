@@ -8,8 +8,8 @@ public class Test {
         int height = 8;
         int width = 8;
         int[] board = makeBoard(height,width);
-        MasyuSearcher searcher = new MasyuSearcher(height, width, board);
-        searcher.search();
+        SMPThreadedMasyuSolverFactory factory = new SMPThreadedMasyuSolverFactory(height, width, board);
+        factory.createAndRunSolversLocal(1, 2, null);
     }
 
     private static int[] makeBoard(int height, int width) {
