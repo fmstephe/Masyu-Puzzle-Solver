@@ -27,6 +27,18 @@ public class IntStack {
         return stack[idx-(lookback+1)];
     }
     
+    public int get(int i) {
+        return stack[i];
+    }
+    
+    public int set(int i, int val) {
+        return stack[i] = val;
+    }
+    
+    public void setSize(int size) {
+        this.idx = size;
+    }
+    
     public int size() {
         return idx;
     }

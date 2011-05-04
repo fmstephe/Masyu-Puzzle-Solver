@@ -198,7 +198,7 @@ public class PathState implements Constants {
             pathMask.recordConstrs(nPos,nDir,mask,cStack);
             cCount++;
         }
-        if (dStack.size() > 2 && boardA[nPos] == WHITE) {
+        if (dStack.size() > 3 && boardA[nPos] == WHITE) {
             int pDir = dStack.peek(1);
             int ppDir = dStack.peek(2);
             // We came straight in - add some constraints for the exit
@@ -208,7 +208,7 @@ public class PathState implements Constants {
                 cCount++;
             }
         }
-        else if (dStack.size() == 1) {
+        else if (dStack.size() == 2) {
             // We left the white pebble, add constraints for entering the white pebble
             if (boardA[nPos] == WHITE) {
                 pathMask.recordConstrs(nPos,EMPTY,SearchUtils.allowOnlyDir(SearchUtils.complementDir(nDir)),cStack);
@@ -220,7 +220,7 @@ public class PathState implements Constants {
                 cCount++;
             }
         }
-        else if (dStack.size() == 2) {
+        else if (dStack.size() == 3) {
             int pPos = pStack.peek(1);
             int pDir = dStack.peek(1);
             // We left the white pebble and went straight, add constraints for turning before entering the white pebble

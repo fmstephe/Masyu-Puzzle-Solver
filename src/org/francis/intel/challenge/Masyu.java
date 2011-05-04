@@ -4,6 +4,8 @@ import java.io.File;
 
 import org.francis.intel.challenge.ProblemReader.PuzzleData;
 import org.francis.intel.challenge.search.MasyuSearcher;
+import org.francis.p2p.worksharing.network.message.ResultMessage;
+import org.francis.p2p.worksharing.smp.SMPMessageManager;
 
 public class Masyu {
 
@@ -15,11 +17,13 @@ public class Masyu {
         for (File problem : problemFiles) {
             PuzzleData puzzle = ProblemReader.parseDimacsFile(problem);
             int[] board = makeBoard(puzzle);
-            MasyuSearcher searcher = new MasyuSearcher(puzzle.height, puzzle.width, board);
+            SMPThreadedMasyuSolverFactory factory = new SMPThreadedMasyuSolverFactory(puzzle.height, puzzle.width, board);
             long startTime = System.currentTimeMillis();
-            String result = searcher.search();
+            SMPMessageManager messageManager = factory.createAndRunSolversLocal(1, 2, null);
+            ResultMessage result = messageManager.receiveResultOrShutDown(1000000000l);
+            System.out.println(result.result);
             System.out.println("Total Time : "+((double)System.currentTimeMillis()-startTime)/1000);
-            ProblemReader.writeSolution(new File(outFileA+"/"+problem.getName()), result);
+            ProblemReader.writeSolution(new File(outFileA+"/"+problem.getName()), result.result.toString());
         }
     }
     

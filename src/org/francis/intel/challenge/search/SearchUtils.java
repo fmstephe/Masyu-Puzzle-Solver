@@ -28,9 +28,23 @@ public class SearchUtils implements Constants {
             case RIGHT : 
                 col = pos%width;
                 return col == width-1 ? -1 : pos+1;
-            case MAGIC_DIR :
+            case MAGIC_DIR & MASK_DIR :
                 return sPos;
             default : throw new IllegalArgumentException();
         }
+    }
+    
+    // Removes the shared bit from a dir
+    public static int filterDir(int dir) {
+        return dir & MASK_DIR;
+    }
+    
+    
+    public static boolean isSharedDir(int dir) {
+        return (dir & MASK_SHARED) == MASK_SHARED;
+    }
+    
+    public static int makeSharedDir(int dir) {
+        return dir | MASK_SHARED;
     }
 }
