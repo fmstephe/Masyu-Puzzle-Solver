@@ -1,6 +1,8 @@
 package org.francis.intel.challenge;
 
 import java.io.File;
+import java.util.Iterator;
+import java.util.Random;
 
 import org.francis.intel.challenge.ProblemReader.PuzzleData;
 import org.francis.intel.challenge.search.MasyuSearcher;
@@ -9,7 +11,7 @@ import org.francis.p2p.worksharing.smp.SMPMessageManager;
 
 public class Masyu {
     
-    public static void mainII(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         String inFileA = args[0];
         String outFileA = args[1];
         File inFile = new File(inFileA);
@@ -47,36 +49,75 @@ public class Masyu {
     }
 
     public static int[] recordPebbles(PuzzleData puzzle) {
-        int[] pebbles = new int[puzzle.blackPebbles.size() + puzzle.whitePebbles.size()];
-        for (int i = 0; i < puzzle.whitePebbles.size(); i++) {
-            int row = puzzle.blackPebbles.get(i * 2);
-            int col = puzzle.blackPebbles.get((i * 2) + 1);
-            pebbles[i] = (row * puzzle.width) + col;
+        assert puzzle.blackPebbles.size()%2 == 0;
+        assert puzzle.whitePebbles.size()%2 == 0;
+        int[] pebbles = new int[(puzzle.blackPebbles.size() + puzzle.whitePebbles.size())/2];
+        int idx = 0;
+        Iterator<Integer> blackItr = puzzle.blackPebbles.iterator();
+        Iterator<Integer> whiteItr = puzzle.whitePebbles.iterator();
+        Random rnd = new Random();
+        while (true) {
+            Iterator<Integer> itr = null;
+            if (rnd.nextBoolean()) {
+                if (blackItr.hasNext()) {
+                    itr = blackItr;
+                }
+                else {
+                    itr = whiteItr;
+                }
+            }
+            else {
+                if (whiteItr.hasNext()) {
+                    itr = whiteItr;
+                }
+                else {
+                    itr = blackItr;
+                }
+            }
+            if (!itr.hasNext())
+                break;
+            int row = itr.next();
+            int col = itr.next();
+            pebbles[idx++] = (row * puzzle.width) + col;
         }
-        for (int i = 0; i < puzzle.whitePebbles.size(); i++) {
-            int row = puzzle.whitePebbles.get(i * 2);
-            int col = puzzle.whitePebbles.get((i * 2) + 1);
-            pebbles[i] = (row * puzzle.width) + col;
-        }
+        assert idx == pebbles.length;
         return pebbles;
     }
+    
+    public static void mainTestI(String[] args) throws InterruptedException {
+        int[] pebbles = new int[2000];
+        Random rnd = new Random();
+        for (int i = 0; i < pebbles.length; i++) {
+            pebbles[i] = rnd.nextInt(10000);
+        }
+        long currentTime = System.currentTimeMillis();
+        pebblesByClosestDistance(pebbles,100);
+        System.out.println(""+(float)(System.currentTimeMillis()-currentTime)/1000);
+    }
+    
+    public static void mainTestII(String[] args) throws InterruptedException {
+        int width = 5;
+        int[] pebbles = new int[]{11,8,3,23,13,5};
+        pebblesByClosestDistance(pebbles, width);
+    }
 
-    public static int[][] pebblesByClosestDistance(int[] pebbles, int width) {
+    public static int[][] pebblesByClosestDistance(int[] pebbles, int width) throws InterruptedException {
         int[][] pebblesByClosestDistance = new int[pebbles.length][];
-        final float[] distanceArray = new float[pebbles.length];
         int[] idxArray = new int[pebbles.length];
         for (int i = 0; i < idxArray.length; i++) {
             idxArray[i] = i;
         }
-        for (int i = 0; i < pebbles.length; i++) {
-            for (int j = 0; j < pebbles.length; j++) {
-                // The distances for i
-                distanceArray[j] = calculateDistance(pebbles[i], pebbles[j], width);
-                int[] idxArrayII = idxArray.clone();
-                int[] idxArraySorted = idxArray.clone();
-                mergeSort(idxArrayII,idxArraySorted,distanceArray,0,distanceArray.length,0);
-                pebblesByClosestDistance[i] = idxArraySorted;
-            }
+        Thread[] workers = new Thread[80];
+        for (int i = 0; i < workers.length; i++) {
+            Worker worker = new Worker(pebblesByClosestDistance, pebbles, idxArray, width, i, workers.length);
+            Thread thread = new Thread(worker);
+            workers[i] = thread;
+        }
+        for (int i = 0; i < workers.length; i++) {
+            workers[i].start();
+        }
+        for (int i = 0; i < workers.length; i++) {
+            workers[i].join();
         }
         return pebblesByClosestDistance;
     }
@@ -127,5 +168,40 @@ public class Masyu {
         int t = x[a];
         x[a] = x[b];
         x[b] = t;
+    }
+    
+    private static class Worker implements Runnable {
+
+        final int[][] pebblesByClosestDistance;
+        final int[] pebbles;
+        final int[] idxArray;
+        final int width;
+        final int offset;
+        final int inc;
+        
+        public Worker(int[][] pebblesByClosestDistance, int[] pebbles, int[] idxArray, int width, int offset, int inc) {
+            super();
+            this.pebblesByClosestDistance = pebblesByClosestDistance;
+            this.pebbles = pebbles;
+            this.idxArray = idxArray;
+            this.width = width;
+            this.offset = offset;
+            this.inc = inc;
+        }
+
+        @Override
+        public void run() {
+            final float[] distanceArray = new float[pebbles.length];
+            for (int i = offset; i < pebbles.length; i+=inc) {
+                for (int j = 0; j < pebbles.length; j++) {
+                    // The distances for i
+                    distanceArray[j] = calculateDistance(pebbles[i], pebbles[j], width);
+                    int[] idxArrayII = idxArray.clone();
+                    int[] idxArraySorted = idxArray.clone();
+                    mergeSort(idxArrayII,idxArraySorted,distanceArray,0,distanceArray.length,0);
+                    pebblesByClosestDistance[i] = idxArraySorted;
+                }
+            }
+        }
     }
 }

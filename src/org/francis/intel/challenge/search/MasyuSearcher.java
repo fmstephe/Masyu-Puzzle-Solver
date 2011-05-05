@@ -28,7 +28,7 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
         this.pStack = new UnsafeIntStack(pathState.totalSqrs+2);
         this.dStack = new LevelStack(5*(pathState.totalSqrs+2));
         this.cStack = new LevelStack(4*(pathState.totalSqrs+2));
-        this.pebbleStack = new UnsafeIntStack(pebbles.length);
+        this.pebbleStack = new UnsafeIntStack(pebbles.length+2);
         this.markablePebbles = pebbles.clone();
         this.nearestPebbleMatrix = nearestPebbleMatrix;
         this.networkManager = networkManager;
@@ -43,10 +43,11 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
     public void search() {
         int solutionCount = 0;
         if (primeWorker) {
-            pshInit();
             System.out.println(pathState);
-            if (pathState.triviallyUnsolvable)
+            if (!pshInit() || pathState.triviallyUnsolvable) {
                 networkManager.triviallyUnsolvable(this);
+                return;
+            }
         }
 //        int commCountdown = primeWorker ? 5 : 0;
         while (true) {
@@ -120,13 +121,25 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
         }
     }
     
-    private void pshInit() {
-        pStack.push(pathState.sPos);
+    private boolean pshInit() {
         pushDirs();
-        cStack.finishLevel(); // Here we seal the first - empty - set of constraints
+        while (!dStack.isEmptyLevel()) {
+            int sDir = dStack.peekVal();
+            if (!pathState.isForbidden(pathState.sPos,sDir)) {
+                pStack.push(pathState.sPos);
+                pathState.setConstraints(pStack,dStack,cStack,pathState);
+                break;
+            }
+            dStack.popVal();
+        }
+        if (dStack.isEmptyLevel()) {
+            return false;
+        }
         pushPebble(0); // The sPos is always the 0th element in the pebble array
         pushPebble(nearestPebbleMatrix[0][1]); // Grab the nearest pebbles to the starting pebble
-        pathState.setConstraints(pStack,dStack,cStack,pathState);
+        assert pStack.size() == dStack.levels();
+        assert pStack.size() == cStack.levels();
+        return true;
     }
     
     private void pushPebble(int pIdx) {

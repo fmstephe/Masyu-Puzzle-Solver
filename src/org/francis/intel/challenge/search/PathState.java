@@ -229,9 +229,11 @@ public class PathState implements Constants {
     public void recordConstrs(int pos, int dir, int fFlags, LevelStack cStack) {
         int newMask = (pathMaskA[pos] | fFlags | dir);
         assert (pathMaskA[pos]&newMask) == pathMaskA[pos];
-        cStack.pushVal(pos);
-        cStack.pushVal(pathMaskA[pos]);
-        pathMaskA[pos] = newMask;
+        if (pathMaskA[pos] != newMask) {
+            cStack.pushVal(pos);
+            cStack.pushVal(pathMaskA[pos]);
+            pathMaskA[pos] = newMask;
+        }
         assert checkBoardState();
     }
     
