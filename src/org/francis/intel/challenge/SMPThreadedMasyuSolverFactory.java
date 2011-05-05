@@ -13,11 +13,15 @@ public class SMPThreadedMasyuSolverFactory {
     int height;
     int width;
     int[] board;
+    int[] pebbles;
+    int[][] nearestPebbleMatrix;
     
-    public SMPThreadedMasyuSolverFactory(int height, int width, int[] board) {
+    public SMPThreadedMasyuSolverFactory(int height, int width, int[] board, int[] pebbles, int[][] nearestPebbleMatrix) {
         this.height = height;
         this.width = width;
         this.board = board;
+        this.pebbles = pebbles;
+        this.nearestPebbleMatrix = nearestPebbleMatrix;
     }
     
     public SMPMessageManager createAndRunSolversLocal(int networkSize, int worksharingThreshold, String logFilePath) {
@@ -40,7 +44,7 @@ public class SMPThreadedMasyuSolverFactory {
         MasyuSearcher[] searchers = new MasyuSearcher[networkManagers.length];
         for (int i = 0; i < networkManagers.length; i++) {
             NetworkManager nwm = networkManagers[i];
-            searchers[i] = new MasyuSearcher(height, width, board, nwm, (i==0));
+            searchers[i] = new MasyuSearcher(height, width, board, pebbles, nearestPebbleMatrix, nwm, (i==0));
         }
         return searchers;
     }

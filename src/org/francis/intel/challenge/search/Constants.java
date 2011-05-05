@@ -1,6 +1,9 @@
 package org.francis.intel.challenge.search;
 
 public interface Constants {
+    
+    public static final int MASK_PEBBLE_MARK = Integer.MIN_VALUE;
+    public static final int MASK_PEBBLE_VAL = Integer.MAX_VALUE;
     public static final int MASK_SHARED = Integer.MIN_VALUE;
     public static final int MASK_DIR = Integer.MAX_VALUE;
  // Playing board values

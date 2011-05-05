@@ -6,26 +6,20 @@ import org.francis.intel.challenge.stack.LevelStack;
 public class PathState implements Constants {
     
     private final int[] pathMaskA;
-    private final int[] boardA;
-    private final int[] pebbles;
+    private final int[] boardA; // Globally shared data-structure
+    private final int[] pebbles; // Globally shared data-structure
     public final int totalSqrs;
     public final int width;
     public final int height;
     public final int sPos;
     boolean triviallyUnsolvable;
     
-    public PathState(int[] boardA, int width, int height) {
+    public PathState(int[] boardA, int[] pebbles, int width, int height) {
         this.boardA = boardA;
         this.width = width;
         this.height = height;
         this.totalSqrs = boardA.length;
-        int pebbleCount = 0;
-        for (int i = 0; i < boardA.length; i++)
-            if (boardA[i] == BLACK || boardA[i] == WHITE) pebbleCount++;
-        pebbles = new int[pebbleCount];
-        pebbleCount = 0;
-        for (int i = 0; i < boardA.length; i++)
-            if (boardA[i] == BLACK || boardA[i] == WHITE) pebbles[pebbleCount++] = i;
+        this.pebbles = pebbles;
         this.sPos = pebbles[0];
         this.pathMaskA = initPathMask();
         this.triviallyUnsolvable = !initConstraints();

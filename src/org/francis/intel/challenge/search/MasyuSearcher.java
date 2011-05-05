@@ -10,19 +10,27 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
     
     final PathState pathState;
     final IntStack pStack;
+    final IntStack pebbleStack;
     final LevelStack dStack;
     final LevelStack cStack;
+    final int[] markablePebbles; // Local mutable array - must be copied from the one passed in
+    final int[][] nearestPebbleMatrix; // Globally shared data-structure, don't fuck with it
     final NetworkManager networkManager;
+    int nextPebblePos;
+    int nextPebbleIdx;
     int sharableWork;
     boolean primeWorker;
     
-    public MasyuSearcher(int height, int width, int[] board, NetworkManager networkManager, boolean primeWorker) {
+    public MasyuSearcher(int height, int width, int[] board, int[] pebbles, int[][] nearestPebbleMatrix, NetworkManager networkManager, boolean primeWorker) {
         assert height*width == board.length;
         this.sharableWork = 0;
-        this.pathState = new PathState(board,width,height);
+        this.pathState = new PathState(board,pebbles,width,height);
         this.pStack = new UnsafeIntStack(pathState.totalSqrs+2);
         this.dStack = new LevelStack(5*(pathState.totalSqrs+2));
         this.cStack = new LevelStack(4*(pathState.totalSqrs+2));
+        this.pebbleStack = new UnsafeIntStack(pebbles.length);
+        this.markablePebbles = pebbles.clone();
+        this.nearestPebbleMatrix = nearestPebbleMatrix;
         this.networkManager = networkManager;
         this.primeWorker = primeWorker;
     }
@@ -116,9 +124,32 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
         pStack.push(pathState.sPos);
         pushDirs();
         cStack.finishLevel(); // Here we seal the first - empty - set of constraints
+        pushPebble(0); // The sPos is always the 0th element in the pebble array
+        pushPebble(nearestPebbleMatrix[0][1]); // Grab the nearest pebbles to the starting pebble
         pathState.setConstraints(pStack,dStack,cStack,pathState);
     }
     
+    private void pushPebble(int pIdx) {
+        assert (markablePebbles[pIdx]&MASK_PEBBLE_MARK) != MASK_PEBBLE_MARK;
+        pebbleStack.push(pIdx);
+        nextPebblePos = markablePebbles[pIdx];
+        nextPebbleIdx = pIdx;
+        markablePebbles[pIdx] |= MASK_PEBBLE_MARK;
+    }
+    
+    private void popPebble() {
+        assert (markablePebbles[pebbleStack.peek()]&MASK_PEBBLE_MARK) == MASK_PEBBLE_MARK;
+        int pIdx = pebbleStack.pop();
+        markablePebbles[nextPebbleIdx] &= MASK_PEBBLE_VAL;
+        if (pebbleStack.size() > 0) {
+            nextPebbleIdx = pebbleStack.peek();
+            nextPebblePos = markablePebbles[nextPebbleIdx]&MASK_PEBBLE_VAL;
+        }
+        else {
+            nextPebbleIdx = -1;
+        }
+    }
+
     private boolean brnchMove() {
         assert pStack.size() > 0;
         assert dStack.levels() > 0;
