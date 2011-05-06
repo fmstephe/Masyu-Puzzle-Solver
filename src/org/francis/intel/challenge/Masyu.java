@@ -19,7 +19,7 @@ public class Masyu {
         for (File problem : problemFiles) {
             PuzzleData puzzle = ProblemReader.parseDimacsFile(problem);
             int[] board = makeBoard(puzzle);
-            int[] pebbles = recordPebbles(puzzle);
+            int[] pebbles = recordPebbles(puzzle,board);
             int[][] nearestPebbleMatrix = pebblesByClosestDistance(pebbles, puzzle.width);
             SMPThreadedMasyuSolverFactory factory = new SMPThreadedMasyuSolverFactory(puzzle.height, puzzle.width, board, pebbles, nearestPebbleMatrix);
             long startTime = System.currentTimeMillis();
@@ -48,7 +48,7 @@ public class Masyu {
         return board;
     }
 
-    public static int[] recordPebbles(PuzzleData puzzle) {
+    public static int[] recordPebbles(PuzzleData puzzle, int[] board) {
         assert puzzle.blackPebbles.size()%2 == 0;
         assert puzzle.whitePebbles.size()%2 == 0;
         int[] pebbles = new int[(puzzle.blackPebbles.size() + puzzle.whitePebbles.size())/2];
@@ -78,7 +78,9 @@ public class Masyu {
                 break;
             int row = itr.next();
             int col = itr.next();
-            pebbles[idx++] = (row * puzzle.width) + col;
+            int pos = (row * puzzle.width) + col;
+            board[pos] |= idx;
+            pebbles[idx++] = pos;
         }
         assert idx == pebbles.length;
         return pebbles;
@@ -150,7 +152,7 @@ public class Masyu {
 
         // If list is already sorted, just copy from src to dest. This is an
         // optimization that results in faster sorts for nearly ordered lists.
-        if (src[mid - 1] <= src[mid]) {
+        if (comp[src[mid - 1]] <= comp[src[mid]]) {
             System.arraycopy(src, low, dest, destLow, length);
             return;
         }
@@ -163,7 +165,7 @@ public class Masyu {
                 dest[i] = src[q++];
         }
     }
-
+    
     private static void swap(int[] x, int a, int b) {
         int t = x[a];
         x[a] = x[b];
@@ -196,11 +198,13 @@ public class Masyu {
                 for (int j = 0; j < pebbles.length; j++) {
                     // The distances for i
                     distanceArray[j] = calculateDistance(pebbles[i], pebbles[j], width);
-                    int[] idxArrayII = idxArray.clone();
-                    int[] idxArraySorted = idxArray.clone();
-                    mergeSort(idxArrayII,idxArraySorted,distanceArray,0,distanceArray.length,0);
-                    pebblesByClosestDistance[i] = idxArraySorted;
                 }
+                assert distanceArray[i] == 0;
+                int[] idxArrayII = idxArray.clone();
+                int[] idxArraySorted = idxArray.clone();
+                mergeSort(idxArrayII,idxArraySorted,distanceArray,0,distanceArray.length,0);
+                pebblesByClosestDistance[i] = idxArraySorted;
+                assert idxArraySorted[0] == i;
             }
         }
     }

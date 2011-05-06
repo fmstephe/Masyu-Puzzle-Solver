@@ -6,8 +6,8 @@ import org.francis.intel.challenge.stack.LevelStack;
 public class PathState implements Constants {
     
     private final int[] pathMaskA;
-    private final int[] boardA; // Globally shared data-structure
-    private final int[] pebbles; // Globally shared data-structure
+    public final int[] boardA;  // Globally shared data-structure, don't fuck with it
+    private final int[] pebbles;  // Globally shared data-structure, don't fuck with it
     public final int totalSqrs;
     public final int width;
     public final int height;
@@ -40,10 +40,10 @@ public class PathState implements Constants {
     
     private boolean initConstraints() {
         // Check the corners for white pebbles
-        if (boardA[0] == WHITE) return false; // Top left
-        if (boardA[width-1] == WHITE) return false; // Top Right
-        if (boardA[width*(height-1)] == WHITE) return false; // Bottom Left
-        if (boardA[boardA.length-1] == WHITE) return false; // Bottom Right
+        if (getBoardVal(0) == WHITE) return false; // Top left
+        if (getBoardVal(width-1) == WHITE) return false; // Top Right
+        if (getBoardVal(width*(height-1)) == WHITE) return false; // Bottom Left
+        if (getBoardVal(boardA.length-1) == WHITE) return false; // Bottom Right
         // Check the sides for white pebbles
         LevelStack throwAway = new LevelStack(boardA.length);
         // Top side
@@ -52,7 +52,7 @@ public class PathState implements Constants {
             if (inARow > 2) {
                 return false;
             }
-            if (boardA[i] == WHITE) {
+            if (getBoardVal(i) == WHITE) {
                 recordConstrs(i, EMPTY, NOT_DOWN, throwAway);
                 inARow++;
             }
@@ -72,7 +72,7 @@ public class PathState implements Constants {
             if (inARow > 2) {
                 return false;
             }
-            if (boardA[i] == WHITE) {
+            if (getBoardVal(i) == WHITE) {
                 recordConstrs(i, EMPTY, NOT_UP, throwAway);
                 inARow++;
             }
@@ -92,7 +92,7 @@ public class PathState implements Constants {
             if (inARow > 2) {
                 return false;
             }
-            if (boardA[i] == WHITE) {
+            if (getBoardVal(i) == WHITE) {
                 recordConstrs(i, EMPTY, NOT_RIGHT, throwAway);
                 inARow++;
             }
@@ -112,7 +112,7 @@ public class PathState implements Constants {
             if (inARow > 2) {
                 return false;
             }
-            if (boardA[i] == WHITE) {
+            if (getBoardVal(i) == WHITE) {
                 recordConstrs(i, EMPTY, NOT_LEFT, throwAway);
                 inARow++;
             }
@@ -144,8 +144,8 @@ public class PathState implements Constants {
     
     public boolean legal(int cPos, int cDir, int nPos, int nDir) {
         if (!checkSurroundingConstraints(cPos)) return false;
-        if (boardA[nPos] == WHITE) return cDir == nDir; // Must pass straight through a white pebble
-        else if (boardA[nPos] == BLACK) return cDir != nDir; // This indicates a nice right angle turn
+        if (getBoardVal(nPos) == WHITE) return cDir == nDir; // Must pass straight through a white pebble
+        else if (getBoardVal(nPos) == BLACK) return cDir != nDir; // This indicates a nice right angle turn
         else return true;
     }
     
@@ -162,7 +162,7 @@ public class PathState implements Constants {
     }
     
     private boolean isOverConstrained(int pos) {
-        if (boardA[pos] == EMPTY) return false;
+        if (getBoardVal(pos) == EMPTY) return false;
         int mask = pathMaskA[pos];
         if ((mask & MASK_PATH) != 0) return false; 
         int conCount = 0;
@@ -178,7 +178,7 @@ public class PathState implements Constants {
     }
     
     public void setConstraints(IntStack pStack, LevelStack dStack, LevelStack cStack, PathState pathMask) {
-        int nPos = pStack.peek();
+        int nPos = pStack.peek()&MASK_POS_VAL;
         int nDir = dStack.peekVal();
         if (nPos == sPos) {
             pathMask.recordConstrs(nPos,nDir,EMPTY,cStack);
@@ -189,7 +189,7 @@ public class PathState implements Constants {
             int mask = CLOSED ^ bMask ^ fMask;
             pathMask.recordConstrs(nPos,nDir,mask,cStack);
         }
-        if (pStack.size() > 2 && boardA[nPos] == WHITE) {
+        if (pStack.size() > 2 && getBoardVal(nPos) == WHITE) {
             int pDir = dStack.peekVal(1);
             int ppDir = dStack.peekVal(2);
             // We came straight in - add some constraints for the exit
@@ -200,24 +200,24 @@ public class PathState implements Constants {
         }
         else if (pStack.size() == 1) {
             // We left the white pebble, add constraints for entering the white pebble
-            if (boardA[nPos] == WHITE) {
+            if (getBoardVal(nPos) == WHITE) {
                 pathMask.recordConstrs(nPos,EMPTY,SearchUtils.forbidPerpendicular(nDir),cStack);
             }
             // We left the black pebble, add constraints for entering the black pebble
-            else if (boardA[nPos] == BLACK) {
+            else if (getBoardVal(nPos) == BLACK) {
                 pathMask.recordConstrs(nPos,EMPTY,SearchUtils.forbidDir(SearchUtils.complementDir(nDir)),cStack);
             }
         }
         else if (pStack.size() == 2) {
-            int pPos = pStack.peek(1);
+            int pPos = pStack.peek(1)&MASK_POS_VAL;
             int pDir = dStack.peekVal(1);
             // We left the white pebble and went straight, add constraints for turning before entering the white pebble
-            if (boardA[pPos] == WHITE && nDir == pDir) {
+            if (getBoardVal(pPos) == WHITE && nDir == pDir) {
                 int ppDir = SearchUtils.complementDir(nDir);
                 int ppPos = SearchUtils.nxtPos(pPos,ppDir,width,boardA.length);
                 pathMask.recordConstrs(ppPos,EMPTY,SearchUtils.forbidDir(ppDir),cStack);
                 // We started on a white pebble and moved immediately to another one, add constraints for exiting the second white pebble
-                if (boardA[nPos] == WHITE) {
+                if (getBoardVal(nPos) == WHITE) {
                     int nnPos = SearchUtils.nxtPos(nPos,nDir,width,boardA.length);
                     pathMask.recordConstrs(nnPos,EMPTY,SearchUtils.forbidDir(nDir),cStack);
                 }
@@ -272,11 +272,20 @@ public class PathState implements Constants {
         return true;
     }
     
+    public int getBoardVal(int pos) {
+        return boardA[pos]&MASK_BOARD_VAL;
+    }
+    
+    public int getPebbleIdx(int pos) {
+        assert getBoardVal(pos) != EMPTY;
+        return boardA[pos]&MASK_BOARD_IDX;
+    }
+    
     public String printBoard() {
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < boardA.length; i++) {
             if (i % width == 0) builder.append("\n");
-            switch(boardA[i]) {
+            switch(getBoardVal(i)) {
                 case BLACK : builder.append("B");
                 case WHITE : builder.append("W");
                 case EMPTY : builder.append(".");
@@ -322,7 +331,7 @@ public class PathState implements Constants {
             }
             builder.append("                  ");
             for (int i = 0; i < width; i++) {
-                switch (boardA[(row*width)+i] & MASK_PATH) {
+                switch (getBoardVal((row*width)+i)) {
                     case WHITE : builder.append("  W  "); break;
                     case BLACK : builder.append("  B  "); break;
                     default : builder.append("  .  ");

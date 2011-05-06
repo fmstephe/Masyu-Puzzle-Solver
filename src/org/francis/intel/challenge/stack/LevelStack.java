@@ -18,6 +18,7 @@ public class LevelStack {
     }
     
     public int peekVal(int backLook) {
+        assert backLook < levelCount;
         int backCount = 0;
         int peekIdx = 0;
         while (backCount < backLook) {

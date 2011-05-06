@@ -10,14 +10,13 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
     
     final PathState pathState;
     final IntStack pStack;
-    final IntStack pebbleStack;
+    final IntStack pebbleIdxStack;
     final LevelStack dStack;
     final LevelStack cStack;
     final int[] markablePebbles; // Local mutable array - must be copied from the one passed in
     final int[][] nearestPebbleMatrix; // Globally shared data-structure, don't fuck with it
     final NetworkManager networkManager;
     int nextPebblePos;
-    int nextPebbleIdx;
     int sharableWork;
     boolean primeWorker;
     
@@ -28,7 +27,7 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
         this.pStack = new UnsafeIntStack(pathState.totalSqrs+2);
         this.dStack = new LevelStack(5*(pathState.totalSqrs+2));
         this.cStack = new LevelStack(4*(pathState.totalSqrs+2));
-        this.pebbleStack = new UnsafeIntStack(pebbles.length+2);
+        this.pebbleIdxStack = new UnsafeIntStack(pebbles.length+2);
         this.markablePebbles = pebbles.clone();
         this.nearestPebbleMatrix = nearestPebbleMatrix;
         this.networkManager = networkManager;
@@ -75,7 +74,7 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
                     System.out.println(printSolution());
                     System.out.println("Solution Found!");
                 }
-                pStack.pop();
+                popPos();
                 dStack.clearLevel();
                 pathState.backtrackConstraints(cStack);
                 backtrack();
@@ -115,18 +114,18 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
             assert dStack.levels() == pStack.size();
             if (brnchMove()) return;
             assert dStack.levels() != pStack.size();
-            pStack.pop();
+            popPos();
             assert dStack.levels() == pStack.size();
             if (pStack.size() == 0) return;
         }
     }
     
     private boolean pshInit() {
+        pushPos(pathState.sPos);
         pushDirs();
         while (!dStack.isEmptyLevel()) {
             int sDir = dStack.peekVal();
             if (!pathState.isForbidden(pathState.sPos,sDir)) {
-                pStack.push(pathState.sPos);
                 pathState.setConstraints(pStack,dStack,cStack,pathState);
                 break;
             }
@@ -135,8 +134,6 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
         if (dStack.isEmptyLevel()) {
             return false;
         }
-        pushPebble(0); // The sPos is always the 0th element in the pebble array
-        pushPebble(nearestPebbleMatrix[0][1]); // Grab the nearest pebbles to the starting pebble
         assert pStack.size() == dStack.levels();
         assert pStack.size() == cStack.levels();
         return true;
@@ -144,34 +141,62 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
     
     private void pushPebble(int pIdx) {
         assert (markablePebbles[pIdx]&MASK_PEBBLE_MARK) != MASK_PEBBLE_MARK;
-        pebbleStack.push(pIdx);
-        nextPebblePos = markablePebbles[pIdx];
-        nextPebbleIdx = pIdx;
+        assert pebbleIdxStack.size() == 0 || pathState.getPebbleIdx(nextPebblePos) != pebbleIdxStack.peek();
+        pebbleIdxStack.push(pIdx);
         markablePebbles[pIdx] |= MASK_PEBBLE_MARK;
+        int[] nearestPebbles = nearestPebbleMatrix[pIdx];
+        // This first element in nearestPebbles always points to itself
+        assert nearestPebbles[0] == pIdx;
+        for (int i = 1; i < nearestPebbles.length; i++) {
+            int nearPebbleIdx = nearestPebbles[i];
+            if ((markablePebbles[nearPebbleIdx]&MASK_PEBBLE_MARK) != MASK_PEBBLE_MARK) {
+                assert nearPebbleIdx != pIdx;
+                nextPebblePos = markablePebbles[nearPebbleIdx];
+                assert pathState.getPebbleIdx(nextPebblePos) != pebbleIdxStack.peek();
+                return;
+            }
+        }
+        // We have run out of pebbles to target so head back to the start again
+        nextPebblePos = pathState.sPos;
+        assert pathState.getPebbleIdx(nextPebblePos) != pebbleIdxStack.peek();
     }
     
     private void popPebble() {
-        assert (markablePebbles[pebbleStack.peek()]&MASK_PEBBLE_MARK) == MASK_PEBBLE_MARK;
-        int pIdx = pebbleStack.pop();
-        markablePebbles[nextPebbleIdx] &= MASK_PEBBLE_VAL;
-        if (pebbleStack.size() > 0) {
-            nextPebbleIdx = pebbleStack.peek();
-            nextPebblePos = markablePebbles[nextPebbleIdx]&MASK_PEBBLE_VAL;
+        assert pebbleIdxStack.size() > 0;
+        assert (markablePebbles[pebbleIdxStack.peek()]&MASK_PEBBLE_MARK) == MASK_PEBBLE_MARK;
+        assert pathState.getPebbleIdx(nextPebblePos) != pebbleIdxStack.peek();
+        int pIdx = pebbleIdxStack.pop();
+        markablePebbles[pIdx] &= MASK_PEBBLE_VAL;
+        nextPebblePos = markablePebbles[pIdx];
+        assert (markablePebbles[pIdx]&MASK_PEBBLE_MARK) != MASK_PEBBLE_MARK;
+        assert pebbleIdxStack.size() == 0 || pathState.getPebbleIdx(nextPebblePos) != pebbleIdxStack.peek();
+    }
+    
+    private void pushPos(int pos) {
+        int pushPos = pos;
+        if (pos == nextPebblePos || pathState.getBoardVal(pos) != EMPTY) {
+            pushPos = pos | MASK_POS_PEBBLE;
+            pushPebble(pathState.getPebbleIdx(pos));
         }
-        else {
-            nextPebbleIdx = -1;
+        pStack.push(pushPos);
+    }
+    
+    private void popPos() {
+        int popPos = pStack.pop();
+        if ((popPos&MASK_POS_PEBBLE) == MASK_POS_PEBBLE) {
+            popPebble();
         }
     }
 
     private boolean brnchMove() {
         assert pStack.size() > 0;
         assert dStack.levels() > 0;
-        int cPos = pStack.peek();
+        int cPos = pStack.peek()&MASK_POS_VAL;
         assert (cPos != pathState.sPos || pStack.size() == 1);
         while (!dStack.clearLevelIfEmpty()) {
             int cDir = dStack.peekVal();
             if ((pStack.size() == 1 || cDir != (dStack.peekVal(1)^1)) && !pathState.isForbidden(cPos,cDir)) {
-                if(pStack.size() == 1 || pathState.legal(pStack.peek(1),dStack.peekVal(1),cPos,cDir)) { // The initial position push doesn't obey the law
+                if(pStack.size() == 1 || pathState.legal(pStack.peek(1)&MASK_POS_VAL,dStack.peekVal(1),cPos,cDir)) { // The initial position push doesn't obey the law
                     pathState.setConstraints(pStack,dStack,cStack,pathState);
                     assert pStack.size() == dStack.levels();
                     return true;
@@ -183,15 +208,15 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
     }
     
     private boolean pshMove() {
-        int cPos = pStack.peek();
+        int cPos = pStack.peek()&MASK_POS_VAL;
         int cDir = dStack.peekVal();
         int nPos = SearchUtils.nxtPos(cPos, cDir, pathState.width, pathState.totalSqrs);
         pushDirs();
         while (!dStack.clearLevelIfEmpty()) {
             int nDir = dStack.peekVal();
             if (!(nDir == (cDir^1)) && !pathState.isForbidden(nPos,nDir)) {
-                if(pathState.legal(cPos,cDir,nPos,nDir) || pStack.size() == 1) { // The initial position push doesn't obey the law
-                    pStack.push(nPos);
+                if(pathState.legal(cPos,cDir,nPos,nDir)) { // The initial position push doesn't obey the law
+                    pushPos(nPos);
                     pathState.setConstraints(pStack,dStack,cStack,pathState);
                     assert pStack.size() == dStack.levels();
                     return true;
@@ -204,10 +229,17 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
     }
     
     private void pushDirs() {
-        dStack.pushVal(UP);
-        dStack.pushVal(DOWN);
-        dStack.pushVal(LEFT);
-        dStack.pushVal(RIGHT);
+        int cPos = pStack.peek();
+        int cX = getCol(cPos);
+        int cY = getRow(cPos);
+        int nX = getCol(nextPebblePos);
+        int nY = getRow(nextPebblePos);
+        int leftOrRight = (cX-nX) < 0 ? RIGHT : LEFT;
+        int upOrDown = (cY-nY) < 0 ? DOWN : UP;
+        dStack.pushVal(SearchUtils.complementDir(leftOrRight));
+        dStack.pushVal(SearchUtils.complementDir(upOrDown));
+        dStack.pushVal(leftOrRight);
+        dStack.pushVal(upOrDown);
         dStack.finishLevel();
     }
     
@@ -234,7 +266,7 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
 //    }
     
     private boolean returned() {
-        int nxtPos = SearchUtils.nxtPos(pStack.peek(),dStack.peekVal(),pathState.width,pathState.totalSqrs);
+        int nxtPos = SearchUtils.nxtPos(pStack.peek()&MASK_POS_VAL,dStack.peekVal(),pathState.width,pathState.totalSqrs);
         return nxtPos == pathState.sPos;
     }
 

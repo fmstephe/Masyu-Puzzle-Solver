@@ -4,11 +4,15 @@ public interface Constants {
     
     public static final int MASK_PEBBLE_MARK = Integer.MIN_VALUE;
     public static final int MASK_PEBBLE_VAL = Integer.MAX_VALUE;
+    public static final int MASK_POS_PEBBLE = Integer.MIN_VALUE;
+    public static final int MASK_POS_VAL = Integer.MAX_VALUE;
     public static final int MASK_SHARED = Integer.MIN_VALUE;
     public static final int MASK_DIR = Integer.MAX_VALUE;
- // Playing board values
-    public static final int BLACK = 1;
-    public static final int WHITE = 2;
+    // Playing board values
+    public static final int BLACK = 0x80000000;
+    public static final int WHITE = 0x40000000;
+    public static final int MASK_BOARD_VAL = 0xf0000000;
+    public static final int MASK_BOARD_IDX = 0x0fffffff;
     public static final int EMPTY = 0;
     // Path-mask values
     public static final int EMPTY_PATH = 0;
@@ -28,9 +32,9 @@ public interface Constants {
     public static final int NOT_LEFT_DOWN = 2048;
     public static final int NOT_RIGHT_UP = 4096;
     public static final int NOT_RIGHT_DOWN = 8192;
-    // Mask for isolating path
+    // Mask for isolating path in a direction value
     public static final int MASK_PATH = Integer.parseInt("00000111",2);
-    // Mask for isolating the forbidden flags
+    // Mask for isolating the forbidden flags in a direction value
     public static final int MASK_CONSTRS = Integer.parseInt("11110000",2);
     // XOR mask for changing orientation UP -> LEFT, DOWN -> RIGHT
     public static final int FLIP_ORIENTATION = Byte.parseByte("00000110",2);
