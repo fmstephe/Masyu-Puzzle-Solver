@@ -122,7 +122,7 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
     
     private boolean pshInit() {
         pushPos(pathState.sPos);
-        pushDirs();
+        pushDirs(pathState.sPos);
         while (!dStack.isEmptyLevel()) {
             int sDir = dStack.peekVal();
             if (!pathState.isForbidden(pathState.sPos,sDir)) {
@@ -211,7 +211,7 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
         int cPos = pStack.peek()&MASK_POS_VAL;
         int cDir = dStack.peekVal();
         int nPos = SearchUtils.nxtPos(cPos, cDir, pathState.width, pathState.totalSqrs);
-        pushDirs();
+        pushDirs(nPos);
         while (!dStack.clearLevelIfEmpty()) {
             int nDir = dStack.peekVal();
             if (!(nDir == (cDir^1)) && !pathState.isForbidden(nPos,nDir)) {
@@ -228,19 +228,36 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
         return false;
     }
     
-    private void pushDirs() {
-        int cPos = pStack.peek();
-        int cX = getCol(cPos);
-        int cY = getRow(cPos);
+    private void pushDirs(int nPos) {
+        int cX = getCol(nPos);
+        int cY = getRow(nPos);
         int nX = getCol(nextPebblePos);
         int nY = getRow(nextPebblePos);
         int leftOrRight = (cX-nX) < 0 ? RIGHT : LEFT;
         int upOrDown = (cY-nY) < 0 ? DOWN : UP;
-        dStack.pushVal(SearchUtils.complementDir(leftOrRight));
-        dStack.pushVal(SearchUtils.complementDir(upOrDown));
-        dStack.pushVal(leftOrRight);
-        dStack.pushVal(upOrDown);
-        dStack.finishLevel();
+        int hPos = SearchUtils.nxtPos(nPos, leftOrRight, pathState.width, pathState.totalSqrs);
+        int vPos = SearchUtils.nxtPos(nPos, upOrDown, pathState.width, pathState.totalSqrs);
+        int hX = getCol(hPos);
+        int hY = getRow(hPos);
+        int vX = getCol(vPos);
+        int vY = getRow(vPos);
+        int hDistance = Math.abs(hX-nX) + Math.abs(hY-nY);
+        int vDistance = Math.abs(vX-nX) + Math.abs(vY-vY);
+        if (vDistance < hDistance) { // Move up and down first
+            dStack.pushVal(SearchUtils.complementDir(leftOrRight));
+            dStack.pushVal(SearchUtils.complementDir(upOrDown));
+            dStack.pushVal(leftOrRight);
+            dStack.pushVal(upOrDown);
+            dStack.finishLevel();
+        }
+        else { // Move side to side first
+            dStack.pushVal(SearchUtils.complementDir(leftOrRight));
+            dStack.pushVal(SearchUtils.complementDir(upOrDown));
+            dStack.pushVal(upOrDown);
+            dStack.pushVal(leftOrRight);
+            dStack.finishLevel();
+        }
+        
     }
     
 //    private void pshMoveReceivedWork(int dir) {

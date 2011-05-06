@@ -215,19 +215,32 @@ public class PathState implements Constants {
     }
     
     private boolean isOverConstrained(int pos) {
-        if (getBoardVal(pos) == EMPTY) return false;
+        int boardVal = getBoardVal(pos);
+        if (boardVal == EMPTY) return false;
         int mask = pathMaskA[pos];
-        if ((mask & MASK_PATH) != 0) return false; 
-        int conCount = 0;
+        if ((mask & MASK_PATH) != 0) return false;
+        int conMask = mask&MASK_CONSTRS;
         for (int dir = UP; dir < NOTHING_LEFT; dir++) {
-            int forbidDir = SearchUtils.forbidDir(dir);
             int forbidCDir = SearchUtils.forbidDir(SearchUtils.complementDir(dir));
-            if ((mask & forbidDir) == forbidDir || (pathMaskA[SearchUtils.nxtPos(pos, dir, width, totalSqrs)] & forbidCDir) == forbidCDir) {
-                conCount++;
-            }
+            int nPos = SearchUtils.nxtPos(pos, dir, width, totalSqrs);
+            if (nPos >= 0) conMask |= pathMaskA[nPos] & forbidCDir;
         }
-            
-        return conCount > 2;
+        if (conMask == (NOT_UP|NOT_DOWN|NOT_RIGHT) ||
+                conMask == (NOT_UP|NOT_DOWN|NOT_LEFT) ||
+                conMask == (NOT_UP|NOT_RIGHT|NOT_LEFT) ||
+                conMask == (NOT_DOWN|NOT_RIGHT|NOT_LEFT)) {
+            // Three constraints around an unvisited pebble is too many
+            return true;
+        }
+        if (boardVal == WHITE &&
+                (conMask == (NOT_UP|NOT_LEFT) ||
+                conMask == (NOT_UP|NOT_RIGHT) ||
+                conMask == (NOT_DOWN|NOT_LEFT) ||
+                conMask == (NOT_DOWN|NOT_RIGHT))) {
+            // Corner constraints around an unvisited white pebble means we can't move straight through it
+            return true;
+        }
+        return false;
     }
     
     public void setConstraints(IntStack pStack, LevelStack dStack, LevelStack cStack, PathState pathMask) {
