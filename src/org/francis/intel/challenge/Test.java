@@ -17,7 +17,7 @@ public class Test {
          puzzle.blackPebbles = Arrays.asList(blackPebbles);
          puzzle.whitePebbles = Arrays.asList(whitePebbles);
          int[] board = Masyu.makeBoard(puzzle);
-         int[] pebbles = Masyu.recordPebbles(puzzle);
+         int[] pebbles = Masyu.recordPebbles(puzzle,board);
          int[][] nearestPebbleMatrix = Masyu.pebblesByClosestDistance(pebbles, puzzle.width);
          SMPThreadedMasyuSolverFactory factory = new SMPThreadedMasyuSolverFactory(puzzle.height, puzzle.width, board, pebbles, nearestPebbleMatrix);
          long startTime = System.currentTimeMillis();

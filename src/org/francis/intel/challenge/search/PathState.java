@@ -126,7 +126,60 @@ public class PathState implements Constants {
                 recordConstrs(bottomPos, EMPTY, NOT_DOWN, throwAway);
             }
         }
+        internalWhiteSequences();
         return true;
+    }
+    
+    private void internalWhiteSequences() {
+        int inARow = 0;
+        LevelStack throwAway = new LevelStack(boardA.length);
+        // Horizontal Check
+        for (int row = 1; row < height-1; row++) {
+            for (int i = 0; i < width; i++) {
+                
+                if (getBoardVal((row*width)+i) == WHITE)
+                    inARow++;
+                else
+                    inARow = 0;
+                
+                if (inARow == 3) {
+                    int ppPos = (row*width)+(i-2);
+                    int pPos = (row*width)+(i-1);
+                    int cPos = (row*width)+i;
+                    recordConstrs(ppPos, EMPTY, NOT_LEFT | NOT_RIGHT, throwAway);
+                    recordConstrs(pPos, EMPTY, NOT_LEFT | NOT_RIGHT, throwAway);
+                    recordConstrs(cPos, EMPTY, NOT_LEFT | NOT_RIGHT, throwAway);
+                }
+                if (inARow > 3) {
+                    int cPos = (row*width)+i;
+                    recordConstrs(cPos, EMPTY, NOT_LEFT | NOT_RIGHT, throwAway);
+                }
+            }
+        }
+        inARow = 0;
+        // Vertical Check
+        for (int col = 1; col < width-1; col++) {
+            for (int i = 0; i < height; i++) {
+                
+                if (getBoardVal((i*width)+col) == WHITE)
+                    inARow++;
+                else
+                    inARow = 0;
+                
+                if (inARow == 3) {
+                    int ppPos = (i-2)*width+col;
+                    int pPos = (i-1)*width+col;
+                    int cPos = (i*width)+col;
+                    recordConstrs(ppPos, EMPTY, NOT_UP | NOT_DOWN, throwAway);
+                    recordConstrs(pPos, EMPTY, NOT_UP | NOT_DOWN, throwAway);
+                    recordConstrs(cPos, EMPTY, NOT_UP | NOT_DOWN, throwAway);
+                }
+                if (inARow > 3) {
+                    int cPos = (i*width)+col;
+                    recordConstrs(cPos, EMPTY, NOT_UP | NOT_DOWN, throwAway);
+                }
+            }
+        }
     }
     
     public boolean isForbidden(int pos, int dir) {
