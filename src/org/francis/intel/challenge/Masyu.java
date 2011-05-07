@@ -17,17 +17,18 @@ public class Masyu {
         File inFile = new File(inFileA);
         File[] problemFiles = inFile.listFiles();
         for (File problem : problemFiles) {
+            System.out.println(problem);
             PuzzleData puzzle = ProblemReader.parseDimacsFile(problem);
             int[] board = makeBoard(puzzle);
             int[] pebbles = recordPebbles(puzzle,board);
             int[][] nearestPebbleMatrix = pebblesByClosestDistance(pebbles, puzzle.width);
             SMPThreadedMasyuSolverFactory factory = new SMPThreadedMasyuSolverFactory(puzzle.height, puzzle.width, board, pebbles, nearestPebbleMatrix);
             long startTime = System.currentTimeMillis();
-            SMPMessageManager messageManager = factory.createAndRunSolversLocal(1, 2, null);
-            ResultMessage result = messageManager.receiveResultOrShutDown(1000000000l);
-            System.out.println(result.result);
+            SMPMessageManager messageManager = factory.createAndRunSolversLocal(8, 2, null);
+            ResultMessage result = messageManager.receiveResultOrShutDown(60000);
+            if (result != null) System.out.println(result.result);
             System.out.println("Total Time : " + ((double) System.currentTimeMillis() - startTime) / 1000);
-            ProblemReader.writeSolution(new File(outFileA + "/" + problem.getName()), result.result.toString());
+            if (result != null) ProblemReader.writeSolution(new File(outFileA + "/" + problem.getName()), result.result.toString());
         }
     }
 

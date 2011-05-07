@@ -31,8 +31,9 @@ public class UnsafeIntStack implements IntStack {
         return stack[i];
     }
     
-    public int set(int i, int val) {
-        return stack[i] = val;
+    public void set(int i, int val) {
+        assert i < idx;
+        stack[i] = val;
     }
     
     public void setSize(int size) {

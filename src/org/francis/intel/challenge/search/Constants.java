@@ -2,12 +2,12 @@ package org.francis.intel.challenge.search;
 
 public interface Constants {
     
-    public static final int MASK_PEBBLE_MARK = Integer.MIN_VALUE;
-    public static final int MASK_PEBBLE_VAL = Integer.MAX_VALUE;
+    public static final int MASK_PEBBLE_MARK = Integer.MIN_VALUE; // Marks whether a pebble has been visited or not
+    public static final int MASK_PEBBLE_VAL = Integer.MAX_VALUE; // Indicates the position of this pebble on the board
     public static final int MASK_POS_PEBBLE = Integer.MIN_VALUE;
     public static final int MASK_POS_VAL = Integer.MAX_VALUE;
-    public static final int MASK_SHARED = Integer.MIN_VALUE;
-    public static final int MASK_DIR = Integer.MAX_VALUE;
+    public static final int MASK_DIR_SHARED = Integer.MIN_VALUE;
+    public static final int MASK_DIR_VAL = Integer.MAX_VALUE;
     // Playing board values
     public static final int BLACK = 0x80000000;
     public static final int WHITE = 0x40000000;

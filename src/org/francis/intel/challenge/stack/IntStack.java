@@ -13,5 +13,8 @@ public interface IntStack {
     public abstract int size();
 
     public abstract void setSize(int size);
-
+    
+    public abstract int get(int i);
+    
+    public abstract void set(int i, int val);
 }

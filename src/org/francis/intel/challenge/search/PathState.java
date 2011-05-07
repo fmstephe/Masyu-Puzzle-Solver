@@ -135,6 +135,7 @@ public class PathState implements Constants {
         LevelStack throwAway = new LevelStack(boardA.length);
         // Horizontal Check
         for (int row = 1; row < height-1; row++) {
+            inARow = 0;
             for (int i = 0; i < width; i++) {
                 
                 if (getBoardVal((row*width)+i) == WHITE)
@@ -156,9 +157,9 @@ public class PathState implements Constants {
                 }
             }
         }
-        inARow = 0;
         // Vertical Check
         for (int col = 1; col < width-1; col++) {
+            inARow = 0;
             for (int i = 0; i < height; i++) {
                 
                 if (getBoardVal((i*width)+col) == WHITE)
@@ -244,20 +245,21 @@ public class PathState implements Constants {
     }
     
     public void setConstraints(IntStack pStack, LevelStack dStack, LevelStack cStack, PathState pathMask) {
-        int nPos = pStack.peek()&MASK_POS_VAL;
-        int nDir = dStack.peekVal();
+        int nPos = SearchUtils.getPosVal(pStack.peek());
+        int nDir = SearchUtils.getDirVal(dStack.peekVal());
         if (nPos == sPos) {
             pathMask.recordConstrs(nPos,nDir,EMPTY,cStack);
         }
         else {
-            int bMask = SearchUtils.forbidDir(SearchUtils.complementDir(dStack.peekVal(1)));
+            int pDir = SearchUtils.getDirVal(dStack.peekVal(1));
+            int bMask = SearchUtils.forbidDir(SearchUtils.complementDir(pDir));
             int fMask = SearchUtils.forbidDir(nDir);
             int mask = CLOSED ^ bMask ^ fMask;
             pathMask.recordConstrs(nPos,nDir,mask,cStack);
         }
         if (pStack.size() > 2 && getBoardVal(nPos) == WHITE) {
-            int pDir = dStack.peekVal(1);
-            int ppDir = dStack.peekVal(2);
+            int pDir = SearchUtils.getDirVal(dStack.peekVal(1));
+            int ppDir = SearchUtils.getDirVal(dStack.peekVal(2));
             // We came straight in - add some constraints for the exit
             if (nDir == pDir && pDir == ppDir) {
                 int nnPos = SearchUtils.nxtPos(nPos,nDir,width,boardA.length);
@@ -275,8 +277,8 @@ public class PathState implements Constants {
             }
         }
         else if (pStack.size() == 2) {
-            int pPos = pStack.peek(1)&MASK_POS_VAL;
-            int pDir = dStack.peekVal(1);
+            int pPos = SearchUtils.getPosVal(pStack.peek(1));
+            int pDir = SearchUtils.getDirVal(dStack.peekVal(1));
             // We left the white pebble and went straight, add constraints for turning before entering the white pebble
             if (getBoardVal(pPos) == WHITE && nDir == pDir) {
                 int ppDir = SearchUtils.complementDir(nDir);
@@ -303,14 +305,16 @@ public class PathState implements Constants {
         assert checkBoardState();
     }
     
-    private boolean checkBoardState() {
+    public boolean checkBoardState() {
         for (int pos = 0; pos < pathMaskA.length; pos++) {
             int dir = pathMaskA[pos] & MASK_PATH;
             if (dir != 0) { 
                 int nPos = SearchUtils.nxtPos(pos,dir,width,totalSqrs);
                 if (nPos >= 0) {
-                    int forbidMask = SearchUtils.forbidDir(SearchUtils.complementDir(dir));
-                    if ((pathMaskA[nPos] & forbidMask) == forbidMask) {
+                    int forbidMask = SearchUtils.forbidDir(dir);
+                    int forbidCMask = SearchUtils.forbidDir(SearchUtils.complementDir(dir));
+                    if ((pathMaskA[nPos] & forbidCMask) == forbidCMask ||
+                            (pathMaskA[pos] & forbidMask) == forbidMask) {
                         System.out.println(this);
                         assert false;
                     }

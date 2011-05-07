@@ -34,21 +34,24 @@ public class SearchUtils implements Constants {
             case RIGHT : 
                 col = pos%width;
                 return col == width-1 ? -1 : pos+1;
-            default : throw new IllegalArgumentException();
+            default : throw new IllegalArgumentException(Integer.toString(pos));
         }
     }
     
     // Removes the shared bit from a dir
-    public static int filterDir(int dir) {
-        return dir & MASK_DIR;
+    public static int getDirVal(int dir) {
+        return dir & MASK_DIR_VAL;
     }
     
-    
     public static boolean isSharedDir(int dir) {
-        return (dir & MASK_SHARED) == MASK_SHARED;
+        return (dir & MASK_DIR_SHARED) == MASK_DIR_SHARED;
     }
     
     public static int makeSharedDir(int dir) {
-        return dir | MASK_SHARED;
+        return dir | MASK_DIR_SHARED;
+    }
+    
+    public static int getPosVal(int pos) {
+        return pos & MASK_POS_VAL;
     }
 }

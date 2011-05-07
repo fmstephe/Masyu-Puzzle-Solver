@@ -4,27 +4,32 @@ import java.util.Arrays;
 
 public class ResizingIntStack implements IntStack {
 
-    private int[] stack;
+    private int[] stackA;
     private int idx = 0;
     
     public ResizingIntStack(int size) {
-        stack = new int[size];
+        stackA = new int[size];
     }
     
+    public ResizingIntStack(ResizingIntStack intStack) {
+        this.stackA = intStack.stackA.clone();
+        this.idx = intStack.idx;
+    }
+
     /* (non-Javadoc)
      * @see org.francis.intel.challenge.stack.IIntStack#push(int)
      */
     @Override
     public void push(int pInt) {
-        if (idx == stack.length)
+        if (idx == stackA.length)
             resize();
-        stack[idx++] = pInt;
+        stackA[idx++] = pInt;
     }
     
     private void resize() {
-        int[] newStack = new int[stack.length*2];
-        System.arraycopy(stack, 0, newStack, 0, stack.length);
-        stack = newStack;
+        int[] newStack = new int[stackA.length*2];
+        System.arraycopy(stackA, 0, newStack, 0, stackA.length);
+        stackA = newStack;
     }
 
     /* (non-Javadoc)
@@ -32,7 +37,7 @@ public class ResizingIntStack implements IntStack {
      */
     @Override
     public int pop() {
-        return stack[--idx];
+        return stackA[--idx];
     }
     
     /* (non-Javadoc)
@@ -40,7 +45,7 @@ public class ResizingIntStack implements IntStack {
      */
     @Override
     public int peek() {
-        return stack[idx-1];
+        return stackA[idx-1];
     }
     
     /* (non-Javadoc)
@@ -48,7 +53,7 @@ public class ResizingIntStack implements IntStack {
      */
     @Override
     public int peek(int lookback) {
-        return stack[idx-(lookback+1)];
+        return stackA[idx-(lookback+1)];
     }
     
     /* (non-Javadoc)
@@ -68,9 +73,31 @@ public class ResizingIntStack implements IntStack {
     }
     
     @Override
+    public void set(int i, int val) {
+        assert i < idx;
+        stackA[i] = val;
+    }
+    
+    @Override
+    public int get(int i) {
+        assert i < idx;
+        return stackA[i];
+    }
+    
+    @Override
     public String toString() {
         int[] print = new int[idx];
-        System.arraycopy(stack, 0, print, 0, idx);
+        System.arraycopy(stackA, 0, print, 0, idx);
         return Arrays.toString(print);
+    }
+
+    public void replicateHere(ResizingIntStack replayStack) {
+        if (stackA.length >= replayStack.idx) {
+            System.arraycopy(replayStack.stackA, 0, stackA, 0, replayStack.idx);
+        }
+        else {
+            stackA = replayStack.stackA.clone();
+        }
+        idx = replayStack.idx;
     }
 }
