@@ -48,7 +48,7 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
     public void search() {
         int solutionCount = 0;
         if (primeWorker) {
-            System.out.println(pathState);
+//            System.out.println(pathState);
             if (!pshInit() || pathState.triviallyUnsolvable) {
                 networkManager.triviallyUnsolvable(this);
                 return;
@@ -73,12 +73,12 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
 //            System.out.println(pathState.toString());
             if (pStack.size() > 2 && returned()) {
                 if (pathState.complete()) {
-                    System.out.println("Solution Found by " + Thread.currentThread());
-                    solutionCount++;
-                    System.out.println();
-                    System.out.println("Solution Found!");
-                    System.out.println();System.out.println();
-                    System.out.print(pathState);
+//                    System.out.println("Solution Found by " + Thread.currentThread());
+//                    solutionCount++;
+//                    System.out.println();
+//                    System.out.println("Solution Found!");
+//                    System.out.println();System.out.println();
+//                    System.out.print(pathState);
                     if(!networkManager.manageNetwork(this))
                         return;
                 }
@@ -208,6 +208,14 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
         int cPos = SearchUtils.getPosVal(pStack.peek());
         boolean isShared = SearchUtils.isSharedDir(dStack.popVal());
         pathState.backtrackConstraints(cStack);
+        if (isShared) {
+            popPos();
+            dStack.clearLevel();
+            assert verifyWorkSize();
+            assert dStack.levels() == pStack.size();
+            assert dStack.levels() == cStack.levels();
+            return false;
+        }
         assert (cPos != pathState.sPos || pStack.size() == 1);
         while (!dStack.clearLevelIfEmpty()) {
             int cDir = SearchUtils.getDirVal(dStack.peekVal());
@@ -224,9 +232,8 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
             }
             dStack.popVal();
         }
-        if(!isShared)
-            sharableWork--;
         popPos();
+        sharableWork--;
         assert verifyWorkSize();
         assert dStack.levels() == pStack.size();
         assert dStack.levels() == cStack.levels();
@@ -392,6 +399,7 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
                 cDir = SearchUtils.getDirVal(dStack.peekVal());
             rStack.pushLevelInto(i, dStack);
             pshMoveReceivedWork(SearchUtils.getDirVal(rStack.peekVal(i)),cDir);
+            backtrack();
         }
     }
 
