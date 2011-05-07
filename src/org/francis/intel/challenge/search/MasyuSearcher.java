@@ -343,8 +343,34 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
         return pathState.printBoard();
     }
 
-    @Override
     public Object giveWork() {
+        return giveWorkBreadth();
+    }
+    
+    public Object giveWorkBreadth() {
+        assert verifyWorkSize();
+        LevelStack sharedStack = new LevelStack(dStack);
+        int retainTarget = (sharableWork/2)+(sharableWork%2);
+        int retainCount = 0;
+        for (int i = 0; i < dStack.levels(); i++) {
+            if (!SearchUtils.isSharedDir(dStack.peekVal(i))) {
+                if (retainCount < retainTarget) {
+                    sharedStack.orLevel(i, MASK_DIR_SHARED);
+                    retainCount++;
+                }
+                else {
+                    dStack.orLevel(i, MASK_DIR_SHARED);
+                    sharableWork--;
+                }
+            }
+        }
+        assert verifyWorkSize();
+        while (SearchUtils.isSharedDir(sharedStack.peekVal()))
+            sharedStack.clearLevel();
+        return sharedStack;
+    }
+    
+    public Object giveWorkDepth() {
         assert verifyWorkSize();
         LevelStack sharedStack = new LevelStack(dStack);
         boolean share = false;

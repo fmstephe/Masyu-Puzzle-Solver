@@ -1,5 +1,7 @@
 package org.francis.intel.challenge.stack;
 
+import java.util.Arrays;
+
 public class LevelStack {
     
     private int levelCount;
@@ -118,5 +120,25 @@ public class LevelStack {
         intStack.replicateHere(rStack.intStack);
         this.depthCounter = rStack.depthCounter;
         this.levelCount = rStack.levelCount;
+    }
+    
+    @Override
+    public String toString() {
+        int[][] outM = new int[levelCount][];
+        for (int backLook = 0; backLook < levelCount; backLook++) {
+            int peekIdx = getBackwardLevelIndex(backLook);
+            int levelDepth = intStack.peek(peekIdx);
+            int bottomPeekIdx = peekIdx+levelDepth+1;
+            assert levelDepth != 0;
+            int[] levelA = new int[levelDepth];
+            for (int i = 0; i < levelDepth; i++) {
+                levelA[levelDepth-(i+1)] = intStack.get(intStack.size()-(bottomPeekIdx-i));
+            }
+            outM[levelCount-(backLook+1)] = levelA;
+        }
+        StringBuilder builder = new StringBuilder();
+        for (int[] outA : outM) 
+            builder.append(Arrays.toString(outA));
+        return builder.toString();
     }
 }
