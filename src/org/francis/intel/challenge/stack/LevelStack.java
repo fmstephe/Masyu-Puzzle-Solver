@@ -132,7 +132,7 @@ public class LevelStack {
             assert levelDepth != 0;
             int[] levelA = new int[levelDepth];
             for (int i = 0; i < levelDepth; i++) {
-                levelA[levelDepth-(i+1)] = intStack.get(intStack.size()-(bottomPeekIdx-i));
+                levelA[levelDepth-(i+1)] = intStack.get(intStack.size()-(bottomPeekIdx-i)); // TODO this is printing in the reverse of what it should do
             }
             outM[levelCount-(backLook+1)] = levelA;
         }

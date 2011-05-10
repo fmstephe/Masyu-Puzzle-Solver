@@ -425,8 +425,8 @@ public class MasyuSearcher implements Constants, WorkSharer, Runnable {
                 cDir = SearchUtils.getDirVal(dStack.peekVal());
             rStack.pushLevelInto(i, dStack);
             pshMoveReceivedWork(SearchUtils.getDirVal(rStack.peekVal(i)),cDir);
-            backtrack();
         }
+        backtrack();
     }
 
     @Override

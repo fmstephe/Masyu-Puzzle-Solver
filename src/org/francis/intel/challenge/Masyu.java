@@ -12,6 +12,40 @@ import org.francis.p2p.worksharing.smp.SMPMessageManager;
 public class Masyu {
     
     public static void main(String[] args) throws InterruptedException {
+        long startTime = System.currentTimeMillis();
+        processFile(args);
+        System.out.println("Total Time : " + (System.currentTimeMillis()-startTime)+" millis");
+    }
+    
+    public static void processFile(String[] args) throws InterruptedException {
+        String inFileA = args[0];
+        String outFileA = args[1];
+        int procs = 80; //Runtime.getRuntime().availableProcessors();
+        System.out.println("Number of processors available = "+Runtime.getRuntime().availableProcessors());
+        if (args.length > 2) {
+            String procsS = args[2];
+            procs = procsS == null ? procs : Integer.parseInt(procsS);
+        }
+        System.out.println("Number of processors used = "+procs);
+        long timeout = Long.MAX_VALUE;
+        if (args.length > 3) {
+            String timeoutS = args[3];
+            timeout = timeoutS == null ? timeout : Long.parseLong(timeoutS);
+        }
+        File problemFile = new File(inFileA);
+            System.out.println(problemFile);
+            PuzzleData puzzle = ProblemReader.parseDimacsFile(problemFile);
+            int[] board = makeBoard(puzzle);
+            int[] pebbles = recordPebbles(puzzle,board);
+            int[][] nearestPebbleMatrix = pebblesByClosestDistance(pebbles, puzzle.width);
+            SMPThreadedMasyuSolverFactory factory = new SMPThreadedMasyuSolverFactory(puzzle.height, puzzle.width, board, pebbles, nearestPebbleMatrix);
+            SMPMessageManager messageManager = factory.createAndRunSolversLocal(procs, 2, null);
+            ResultMessage result = messageManager.receiveResultOrShutDown(timeout);
+            if (result != null) System.out.println(result.result);
+            if (result != null) ProblemReader.writeSolution(new File(outFileA), result.result.toString());
+    }
+    
+    public static void processFolder(String[] args) throws InterruptedException {
         String inFileA = args[0];
         String outFileA = args[1];
         int procs = Runtime.getRuntime().availableProcessors();
@@ -19,6 +53,11 @@ public class Masyu {
         if (args.length > 2) {
             String procsS = args[2];
             procs = procsS == null ? procs : Integer.parseInt(procsS);
+        }
+        long timeout = Long.MAX_VALUE;
+        if (args.length > 3) {
+            String timeoutS = args[3];
+            timeout = timeoutS == null ? timeout : Long.parseLong(timeoutS);
         }
         File inFile = new File(inFileA);
         File[] problemFiles = inFile.listFiles();
@@ -31,7 +70,7 @@ public class Masyu {
             SMPThreadedMasyuSolverFactory factory = new SMPThreadedMasyuSolverFactory(puzzle.height, puzzle.width, board, pebbles, nearestPebbleMatrix);
             long startTime = System.currentTimeMillis();
             SMPMessageManager messageManager = factory.createAndRunSolversLocal(procs, 2, null);
-            ResultMessage result = messageManager.receiveResultOrShutDown(1000000000000000l);
+            ResultMessage result = messageManager.receiveResultOrShutDown(timeout);
             if (result != null) System.out.println(result.result);
             System.out.println("Total Time : " + ((double) System.currentTimeMillis() - startTime) / 1000);
             if (result != null) ProblemReader.writeSolution(new File(outFileA + "/" + problem.getName()), result.result.toString());
