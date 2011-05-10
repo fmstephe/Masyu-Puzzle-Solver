@@ -1,2 +1,4 @@
 A project from the Intel Threading Challenge for solving Masyu Puzzles.
 Unfortunately at this stage not very user or external programmer friendly.
+
+Project dependency https://github.com/fmstephe/P2P-Work-Sharing-Library
